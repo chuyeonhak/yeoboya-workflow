@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "items": [
+    {"id": "error_cases", "name": "에러 케이스", "description": "네트워크/서버 오류 발생 시 UX", "applies_to": ["iOS", "Android", "공통"]},
+    {"id": "empty_state", "name": "빈 상태", "description": "데이터 없거나 초기 진입 시 화면", "applies_to": ["iOS", "Android", "공통"]},
+    {"id": "offline", "name": "오프라인 처리", "description": "네트워크 끊김 시 동작 (캐시 / 재시도)", "applies_to": ["iOS", "Android", "공통"]},
+    {"id": "permissions", "name": "권한", "description": "카메라/위치/알림/사진 권한 요청 및 거부 플로우", "applies_to": ["iOS", "Android"]},
+    {"id": "loading", "name": "로딩 상태", "description": "비동기 작업 인디케이터 / 스켈레톤", "applies_to": ["iOS", "Android", "공통"]},
+    {"id": "a11y", "name": "접근성", "description": "스크린리더, 컬러 대비, 터치 타겟 크기", "applies_to": ["iOS", "Android", "공통"]}
+  ]
+}
