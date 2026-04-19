@@ -54,3 +54,95 @@ Run: `command -v tesseract`
   이미지 전용 페이지의 텍스트 추출이 안 될 수 있습니다.
   설치: brew install tesseract tesseract-lang (macOS)
 ```
+
+## Phase 1 — 파싱
+
+### 1-1. 임시 작업 폴더 생성
+
+```bash
+PDF_PATH="$1"  # 절대경로로 정규화된 값
+PDF_HASH=$(python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/pdf_hash.py" "$PDF_PATH")
+TS=$(date +%s)
+WORK_DIR="/tmp/spec-draft-${PDF_HASH}-${TS}"
+mkdir -p "$WORK_DIR"
+DRAFT_PATH="${WORK_DIR}/draft.md"
+```
+
+### 1-2. 동시 실행 감지
+
+```bash
+python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/draft_registry.py" \
+  query-recent --hash "$PDF_HASH" --within-seconds 300 > "${WORK_DIR}/recent.json"
+```
+
+`recent.json` 의 `found` 가 `true` 면 사용자에게 경고:
+```
+⚠️  5분 내 동일 PDF 를 다른 실행이 처리했습니다.
+  실행자: <entry.who>  시작: <time>  경로: <entry.draft_path>
+
+덮어쓰기 전에 조율하세요. 계속할까요? (y/n)
+```
+
+`n` 이면 중단.
+
+### 1-3. 실행 기록
+
+```bash
+python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/draft_registry.py" \
+  record --hash "$PDF_HASH" --draft-path "$DRAFT_PATH" --status running
+```
+
+### 1-4. parse_pdf 실행
+
+```bash
+python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/parse_pdf.py" \
+  "$PDF_PATH" --out-dir "${WORK_DIR}/images" > "${WORK_DIR}/parsed.json"
+```
+
+exit code:
+- `0`: 계속
+- `1`: 파일/포맷 오류 → 에러 출력 + 중단
+- `3`: 암호화 PDF → "암호 해제된 PDF로 다시 시도해주세요" 안내 + 중단
+
+### 1-5. OCR fallback 판단
+
+`parsed.json` 의 `pages` 에서 `has_text: false` 페이지가 있고 이미지가 있으면 OCR 실행:
+
+```bash
+IMG_PATHS=$(python3 -c "
+import json
+data = json.load(open('${WORK_DIR}/parsed.json'))
+need_ocr = any(not p['has_text'] for p in data['pages'])
+if need_ocr:
+    print(' '.join(img['path'] for img in data['images']))
+" )
+
+if [ -n "$IMG_PATHS" ] && command -v tesseract >/dev/null 2>&1; then
+  python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/ocr_fallback.py" \
+    --images $IMG_PATHS > "${WORK_DIR}/ocr.json"
+  echo "  (OCR 결과 품질이 낮을 수 있습니다. 개발자 노트에서 보완하세요.)"
+fi
+```
+
+### 1-6. PII 스캔
+
+```bash
+python3 -c "
+import json
+data = json.load(open('${WORK_DIR}/parsed.json'))
+print('\n'.join(p['text'] for p in data['pages']))
+" | python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/pii_scan.py" > "${WORK_DIR}/pii.json"
+```
+
+`pii.json` 의 `findings` 가 비어있지 않으면 경고만 표시 (차단 아님):
+```
+⚠️  PII 로 의심되는 패턴이 발견되었습니다 (N건):
+  - email (line 12): u***r@example.com
+  - phone (line 34): 010-****-5678
+
+민감 정보가 Notion 에 퍼블리시될 수 있습니다. 진행할까요? (y/n)
+```
+
+### 1-7. 통합 데이터 구성
+
+`parsed.json`, `ocr.json` (있으면), `pii.json` 을 Claude 가 읽어 후속 Phase 에서 사용한다.
