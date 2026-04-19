@@ -5,7 +5,8 @@
 ## [Unreleased]
 
 ### Changed
-- `pdf-spec-organizer` 스킬 description 을 자연어 트리거에 최적화 (사용자 실제 어휘 5종 반영, skill-creator "pushy" 원칙 적용)
+- `pdf-spec-organizer` 스킬 description 을 자연어 트리거에 최적화 (사용자 실제 어휘 7종 반영, skill-creator "pushy" 원칙 적용, `/spec-update` 경로 명시)
+- 트리거 eval 2 반복 튜닝 결과 **20/20 (100%)** 달성 — Iter1 90% → Iter2 100%. 실패 사례(기존 페이지 노트 추가) 해결
 - SKILL.md Phase 5 세부(충돌 처리 프롬프트, 이미지 업로드 fallback) 를 `references/conflict-policy.md` 로 이동 (SKILL.md 길이 감축)
 
 ### Added
