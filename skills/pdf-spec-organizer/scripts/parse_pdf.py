@@ -26,6 +26,7 @@ from pathlib import Path
 
 from PyPDF2 import PdfReader
 from PyPDF2.errors import PdfReadError, DependencyError
+from pdf2image import convert_from_path
 
 TEXT_MIN_CHARS = 10
 
@@ -43,6 +44,25 @@ def extract_pages(reader: PdfReader) -> list[dict]:
             "has_text": len(text.strip()) >= TEXT_MIN_CHARS,
         })
     return pages
+
+
+def extract_page_images(pdf_path: Path, out_dir: Path, pages_info: list[dict]) -> list[dict]:
+    """Render each page as PNG and return references.
+
+    For v1 we save one image per page (not per-image in page) to keep downstream
+    simple. Phase 5 can attach visual context in Notion regardless.
+    """
+    images = []
+    try:
+        pil_images = convert_from_path(str(pdf_path), dpi=150)
+    except Exception as exc:
+        print(f"warning: image rendering failed: {exc}", file=sys.stderr)
+        return images
+    for i, pil_img in enumerate(pil_images, start=1):
+        img_path = out_dir / f"page_{i}_img_0.png"
+        pil_img.save(img_path, "PNG")
+        images.append({"page_num": i, "idx": 0, "path": str(img_path)})
+    return images
 
 
 def main() -> int:
@@ -71,9 +91,10 @@ def main() -> int:
         return 3
 
     pages = extract_pages(reader)
+    images = extract_page_images(args.pdf_path, args.out_dir, pages)
     output = {
         "pages": pages,
-        "images": [],
+        "images": images,
         "meta": {"total_pages": len(pages), "encrypted": False},
     }
     json.dump(output, sys.stdout)

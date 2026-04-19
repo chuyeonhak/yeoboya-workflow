@@ -41,3 +41,14 @@ def test_parse_pdf_missing_file_exits_nonzero(tmp_path):
     missing = tmp_path / "missing.pdf"
     result = run_parse(missing, tmp_path)
     assert result.returncode != 0
+
+
+def test_parse_pdf_extracts_images_for_image_only_pdf(tmp_path):
+    result = run_parse(IMAGE_ONLY, tmp_path)
+    assert result.returncode == 0, result.stderr
+    data = json.loads(result.stdout)
+    assert "images" in data
+    assert len(data["images"]) >= 1
+    img = data["images"][0]
+    assert set(img.keys()) >= {"page_num", "idx", "path"}
+    assert Path(img["path"]).is_file()
