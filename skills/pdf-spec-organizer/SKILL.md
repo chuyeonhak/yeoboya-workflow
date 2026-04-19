@@ -342,3 +342,138 @@ print(json.dumps({'items': items, 'source': source}))
 
 - `c` → Phase 5 로 가기 전 정리 (상태 failed 로 기록)
 - `e` → 4-2 로 돌아감
+
+## Phase 5 — 충돌 처리 + 퍼블리시 + 개입 ③
+
+### 5-1. DB ID 확보
+
+Precondition 에서 읽은 `notion_database_id` 사용. 없으면 Phase 0에서 이미 중단됐을 것이므로 여기서는 존재 가정.
+
+### 5-2. 피처별 루프
+
+각 피처에 대해:
+
+#### 5-2-a. 기존 페이지 조회
+
+`mcp__claude_ai_Notion__notion-search` 로 **DB ID 필터 + 제목 완전 일치** 쿼리. 결과 있으면 충돌 처리로, 없으면 새로 생성.
+
+#### 5-2-b. 충돌 시
+
+`references/conflict-policy.md` 의 정책에 따라 프롬프트:
+
+```
+Notion 에 같은 피처가 이미 존재합니다:
+  제목: <피처명>
+  최근 생성자: <author>
+  생성일: <date>
+  기존 PDF 해시: <hash or "없음">  (현재: <my_hash>)
+
+어떻게 할까요?
+  [1] 병합 (내 플랫폼 섹션만 append) ← 기본
+  [2] 덮어쓰기 (기존 노트 손실 가능)
+  [3] 새 버전 (이전_버전 Relation 으로 연결)
+  [4] 건너뛰기 (이 피처만 스킵)
+>
+```
+
+**`--fast` 플래그:** `[1] 병합` 자동 선택. [2]/[3]/[4] 는 `--fast` 에서도 프롬프트 발생.
+
+- **병합**: `mcp__claude_ai_Notion__notion-fetch` 로 기존 페이지 본문 읽기 → 내 플랫폼 섹션만 교체 → `mcp__claude_ai_Notion__notion-update-page` 로 업데이트
+- **덮어쓰기**: "정말로 덮어쓰시겠습니까? (y/N)" 추가 확인 → yes 면 전체 본문 교체
+- **새 버전**: 새 페이지 생성 + 새 페이지의 `이전_버전` Relation 에 기존 페이지 연결
+- **건너뛰기**: 다음 피처로
+
+#### 5-2-c. 충돌 없으면 새 페이지 생성
+
+`mcp__claude_ai_Notion__notion-create-pages` 로 생성:
+- 속성: 이름, 플랫폼, 상태=Draft, 원본_PDF=파일명만, PDF_해시, 생성자=현재 사용자, 누락_항목=`missing` 리스트
+- 본문: `draft.md` 의 Notion 대응 블록으로 변환
+
+#### 5-2-d. 이미지 업로드
+
+각 피처의 `screens` 이미지 경로를 Notion 파일 업로드 API 로 올려 `image` 블록으로 삽입.
+
+**Notion MCP 의 파일 업로드 지원 여부 점검:**
+- `mcp__claude_ai_Notion__notion-create-pages` 가 로컬 파일 경로를 직접 지원하지 않는 경우 대비:
+  - 1차: 이미지 블록에 placeholder URL 삽입 + 캡션에 로컬 경로 주석으로 표시
+  - 2차 (v0.2 계획): S3/imgur 중계 업로더 추가. 지금은 placeholder + 경고.
+- 이 대응은 `docs/manual-qa.md` 의 이슈로도 문서화.
+
+### 5-3. 실행 기록 갱신
+
+모든 피처 성공 시:
+```bash
+python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/draft_registry.py" \
+  update-status --draft-path "$DRAFT_PATH" --status success
+```
+
+부분 실패 시 failed 기록 + 실패 피처 목록을 터미널에 표시 + `/spec-resume` 가이드:
+```
+⚠️  3개 중 2개 피처만 퍼블리시됐습니다:
+  ✓ 알림 설정 화면
+  ✓ 푸시 권한 요청 플로우
+  ✗ 빈 상태 UI (Notion API timeout)
+
+이어서 시도: /spec-resume --resume-latest
+초안: <draft_path>
+```
+
+### 5-4. 결과 요약
+
+성공 시:
+```
+✓ 퍼블리시 완료:
+  - 알림 설정 화면: https://notion.so/...
+  - 푸시 권한 요청 플로우: https://notion.so/...
+  - 빈 상태 UI: https://notion.so/...
+
+초안은 3일 후 자동 삭제됩니다: <draft_path>
+```
+
+### 5-5. GC 트리거
+
+기회적 GC (성공 시만):
+```bash
+python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/draft_registry.py" gc
+```
+
+## Resume 모드
+
+`/spec-resume` 가 호출되면 이 Skill 이 다른 모드로 진입.
+
+### R-1. 초안 선택
+
+- `--resume-latest`: `draft_registry list-latest --count 5` 결과에서 **`status` 가 `running` 또는 `failed`** 인 최신 항목 자동 선택. 없으면 사용자에게 리스트 보여주고 선택받기.
+- `--resume <path>`: 지정된 경로 사용. 없으면 중단.
+
+### R-2. 상태 복구
+
+초안 파일의 `<!-- plugin-state -->` 헤더에서 `phase` 를 읽어 다음 Phase 부터 시작:
+- `phase: 1` → Phase 2 부터 재실행
+- `phase: 2` → Phase 3 부터
+- `phase: 3` → Phase 4 부터
+- `phase: 4` → Phase 5 부터
+
+### R-3. 실행
+
+해당 Phase 부터 본 워크플로우와 동일하게 진행. 마지막에 `update-status` 갱신.
+
+## Update 모드 (`/spec-update`)
+
+기존 Notion 페이지 URL 을 받아 **Phase 4 만** 다시 실행.
+
+### U-1. 페이지 조회
+
+`mcp__claude_ai_Notion__notion-fetch` 로 기존 페이지 본문 가져옴.
+
+### U-2. 임시 초안으로 변환
+
+본문을 `references/review-format.md` 포맷의 md 로 변환해 `${WORK_DIR}/draft.md` 저장.
+
+### U-3. 노트 작성 (Phase 4 재사용)
+
+Phase 4 로직 그대로 실행.
+
+### U-4. 병합 퍼블리시
+
+Phase 5 의 **병합** 경로만 사용. 덮어쓰기/새 버전은 이 모드에서 허용 안 함.
