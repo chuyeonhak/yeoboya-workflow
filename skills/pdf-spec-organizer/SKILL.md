@@ -277,3 +277,68 @@ print(json.dumps({'items': items, 'source': source}))
 
 계속하려면 Enter.
 ```
+
+## Phase 4 — 개발자 노트 + 미리보기 + 개입 ②
+
+### 4-1. 초안 md 파일 렌더
+
+`features.json` + `missing.json` + `parsed.json` 을 통합해 `${DRAFT_PATH}` 로 저장.
+포맷은 `references/review-format.md` 의 "초안 파일 구조" 를 엄격히 따른다.
+
+**중요:**
+- 헤더 `<!-- plugin-state ... -->` 에 `phase: 4`, `pdf_hash`, `source_file`, `created_at` 포함
+- 각 피처마다 iOS/Android/공통 노트 섹션은 **빈 상태**로 렌더 (사용자가 채움)
+- `--fast` 플래그여도 이 Phase 는 생략되지 않음
+
+### 4-2. 사용자에게 노트 작성 프롬프트
+
+```
+다음 단계: 개발자 노트 작성
+
+초안 파일: /tmp/spec-draft-<hash>-<ts>/draft.md
+
+당신의 플랫폼 섹션(iOS / Android / 공통)만 채우세요.
+타 플랫폼 섹션은 Phase 5 병합 시 보존됩니다.
+
+어떻게 할까요?
+  e) 에디터($EDITOR)로 열기  ← 권장
+  s) 건너뛰기 (빈 노트로 퍼블리시)
+  c) 취소
+>
+```
+
+`e` 선택 시 `$EDITOR` 로 열기. macOS 기본값이 없으면 `code` / `vim` 순으로 시도.
+
+### 4-3. 저장 후 검증
+
+에디터 종료 후:
+- 파일 존재 확인
+- `plugin-state` 헤더 파싱해 `phase` 업데이트
+- 노트 섹션이 완전히 비어도 경고만 표시 (계속 가능):
+  ```
+  ℹ️  노트가 비어있습니다. Phase 5 로 계속할까요? (y/n/e)
+  ```
+  `e` 는 다시 에디터 열기.
+
+### 4-4. 최종 미리보기
+
+터미널에 초안 요약 출력:
+```
+미리보기:
+
+  피처 3개, 누락 항목 5개, 노트:
+    - 알림 설정 화면: iOS ✓, Android ✗, 공통 ✓
+    - 푸시 권한 요청 플로우: iOS ✓, Android ✗, 공통 ✗
+    - 빈 상태 UI: iOS ✗, Android ✗, 공통 ✗
+
+  Notion 에 퍼블리시할까요?
+    y) 퍼블리시
+    e) 에디터로 다시 열기
+    c) 취소
+>
+```
+
+### 4-5. 취소 / 에디터 재진입 처리
+
+- `c` → Phase 5 로 가기 전 정리 (상태 failed 로 기록)
+- `e` → 4-2 로 돌아감
