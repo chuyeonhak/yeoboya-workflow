@@ -1,0 +1,47 @@
+# Notion 피처 DB 자동 생성 시 사용하는 스키마 정의.
+# Skill 의 최초 셋업 단계에서 이 정의를 참고해 Notion API 로 DB 를 만든다.
+
+database:
+  title: "여보야 피처 스펙"
+  description: "PDF 스펙에서 정리된 피처 페이지. iOS/Android 개발자가 같은 페이지에서 노트를 공유한다."
+
+properties:
+  이름:
+    type: title
+  플랫폼:
+    type: multi_select
+    options: [iOS, Android, 공통]
+  상태:
+    type: select
+    options: [Draft, In Review, Ready, In Dev, Done]
+  원본_PDF:
+    type: rich_text
+    note: "파일명만 저장. 전체 경로는 저장하지 않음."
+  PDF_해시:
+    type: rich_text
+    note: "SHA-256 앞 12자. 동시 실행 감지/버전 매칭용."
+  소스_링크:
+    type: url
+    note: "PRD/Jira/Figma 등 외부 링크. 다건은 본문 링크 블록에 추가."
+  이전_버전:
+    type: relation
+    target: self
+  관련_피처:
+    type: relation
+    target: self
+  생성자:
+    type: people
+  생성일:
+    type: created_time
+  누락_항목:
+    type: multi_select
+    options: [error_cases, empty_state, offline, permissions, loading, a11y]
+    note: "checklist.yaml 의 id 값. 설정 변경 시 options 도 갱신 필요."
+
+body_sections:
+  - 개요
+  - 화면 / 플로우
+  - 요구사항
+  - 누락 체크
+  - 개발자 노트 (iOS / Android / 공통)
+  - 메타
