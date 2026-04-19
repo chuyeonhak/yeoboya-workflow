@@ -217,3 +217,63 @@ python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/draft_registry.
   update-status --draft-path "$DRAFT_PATH" --status failed
 ```
 /tmp 폴더는 TTL 에 의해 7일 후 자동 삭제.
+
+## Phase 3 — 누락 체크
+
+### 3-1. 체크리스트 로드
+
+```bash
+CHECKLIST_YAML="${CLAUDE_PLUGIN_ROOT}/config/pdf-spec-organizer/checklist.yaml"
+CHECKLIST_FALLBACK="${CLAUDE_PLUGIN_ROOT}/config/pdf-spec-organizer/default-checklist.json"
+
+python3 -c "
+import sys, json, yaml
+try:
+    items = yaml.safe_load(open('${CHECKLIST_YAML}'))['items']
+    source = 'yaml'
+except Exception as e:
+    print(f'⚠️  checklist.yaml 파싱 실패: {e}. fallback 사용.', file=sys.stderr)
+    items = json.load(open('${CHECKLIST_FALLBACK}'))['items']
+    source = 'fallback'
+print(json.dumps({'items': items, 'source': source}))
+" > "${WORK_DIR}/checklist.json"
+```
+
+`source == 'fallback'` 이면 경고 표시 (계속 진행).
+
+### 3-2. 피처별 누락 항목 계산
+
+각 피처에 대해:
+1. `applies_to` 와 피처 `platform` 의 교집합이 비어있으면 해당 체크 항목은 스킵
+2. 남은 항목에 대해 Claude 가 피처의 `summary` + `requirements` 를 읽고 "이 항목이 명시되어 있는가?" 판정
+3. 명시 안 됨 → 누락으로 표시
+
+결과를 `${WORK_DIR}/missing.json` 으로 저장:
+```json
+{
+  "features": [
+    {
+      "name": "알림 설정 화면",
+      "missing": ["error_cases", "offline"],
+      "satisfied": ["empty_state", "loading", "a11y"]
+    }
+  ]
+}
+```
+
+### 3-3. 요약 출력
+
+```
+누락 체크 완료:
+  1. 알림 설정 화면
+     누락: 에러 케이스, 오프라인 처리
+     명시: 빈 상태, 로딩 상태, 접근성
+
+  2. 푸시 권한 요청 플로우
+     누락: 권한 거부 재요청 UX
+     명시: 에러 케이스, 빈 상태
+
+  의도된 제외는 다음 단계 "개발자 노트" 에 적어주세요.
+
+계속하려면 Enter.
+```
