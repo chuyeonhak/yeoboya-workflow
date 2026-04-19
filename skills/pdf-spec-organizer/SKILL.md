@@ -146,3 +146,74 @@ print('\n'.join(p['text'] for p in data['pages']))
 ### 1-7. 통합 데이터 구성
 
 `parsed.json`, `ocr.json` (있으면), `pii.json` 을 Claude 가 읽어 후속 Phase 에서 사용한다.
+
+## Phase 2 — 구조화 + 개입 ①
+
+### 2-1. Claude 에게 피처 추출 지시
+
+Phase 1 산출물(`parsed.json` + `ocr.json` + 이미지 썸네일)을 읽어 **피처 리스트**를 생성한다.
+
+추출 규칙:
+- 한 피처 = 하나의 사용자 가치 단위 (화면/플로우 1~N개 포함 가능)
+- 각 피처마다 필드:
+  - `name`: 간결한 한글 이름 (10자 내외)
+  - `platform`: iOS / Android / 공통 중 1개 이상
+  - `summary`: 1-2문장
+  - `screens`: 관련 이미지 페이지 번호 리스트
+  - `requirements`: 불릿 포인트 리스트
+
+결과를 `${WORK_DIR}/features.json` 으로 저장.
+
+### 2-2. 사용자 확인 프롬프트
+
+`references/review-format.md` 의 "터미널 출력 규약" 섹션을 따라 피처 목록 출력:
+
+```
+피처 3개 추출됨:
+  1. 알림 설정 화면 (iOS, Android)
+  2. 푸시 권한 요청 플로우 (iOS, Android)
+  3. 빈 상태 UI (공통)
+
+이대로 진행할까요?
+  y) 진행
+  s N) 피처 N번 쪼개기
+  m N,M) 피처 N,M 합치기
+  r N) 피처 N번 리네이밍
+  t N) 피처 N번 플랫폼 변경
+  e) 에디터에서 수정
+  c) 취소
+>
+```
+
+**`--fast` 플래그 처리:**
+- 피처 경계 확인(s/m/r) 은 자동 통과
+- **플랫폼 태깅(t) 확인은 여전히 강제**. 프롬프트:
+  ```
+  [--fast 모드] 플랫폼 태깅을 확인해주세요:
+    1. 알림 설정 화면 → iOS, Android
+    2. 푸시 권한 요청 플로우 → iOS, Android
+    3. 빈 상태 UI → 공통
+
+  모두 맞으면 y, 수정하려면 t N:
+  >
+  ```
+
+### 2-3. 사용자 입력 처리 루프
+
+각 명령별 동작:
+- `y` → 다음 Phase
+- `s N` → 피처 N번을 Claude 에게 "더 작게 쪼개세요" 지시, 결과 갱신 후 다시 2-2 로
+- `m N,M` → Claude 에게 "N번과 M번을 병합, 이름/플랫폼 재정의" 지시 후 2-2
+- `r N` → 사용자에게 새 이름 입력받아 N번 `name` 교체 후 2-2
+- `t N` → 사용자에게 새 플랫폼 선택(체크박스) 받아 N번 `platform` 교체 후 2-2
+- `e` → `${WORK_DIR}/features.md` 로 직렬화 → `$EDITOR` 로 열기 → 저장 후 다시 파싱해서 `features.json` 갱신 → 2-2
+- `c` → Phase 정리(아래) 후 중단
+
+### 2-4. 중단 정리
+
+취소 시:
+```bash
+python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/draft_registry.py" \
+  update-status --draft-path "$DRAFT_PATH" --status failed
+```
+/tmp 폴더는 TTL 에 의해 7일 후 자동 삭제.
