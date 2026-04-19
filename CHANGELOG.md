@@ -2,7 +2,7 @@
 
 모든 주목할 만한 변경 사항을 이 파일에 기록합니다.
 
-## [Unreleased]
+## [0.1.1] - 2026-04-19
 
 ### Changed
 - `pdf-spec-organizer` 스킬 description 을 자연어 트리거에 최적화 (사용자 실제 어휘 7종 반영, skill-creator "pushy" 원칙 적용, `/spec-update` 경로 명시)
