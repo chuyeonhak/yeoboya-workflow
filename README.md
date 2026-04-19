@@ -310,6 +310,28 @@ pytest tests/ -v
 
 18개 단위 테스트 (parse_pdf, ocr_fallback, pii_scan, pdf_hash, draft_registry).
 
+### Description 최적화 실행
+
+skill-creator 의 `run_loop.py` 로 `pdf-spec-organizer` 스킬의 description 을 자동 튜닝할 수 있다. 20개 trigger eval query 는 `evals/trigger-eval.json` 에 준비됨.
+
+```bash
+# skill-creator 가 설치된 디렉토리로 이동 (예: 플러그인 캐시)
+cd ~/.claude/plugins/cache/skill-creator/unknown/skills/skill-creator
+
+python -m scripts.run_loop \
+  --eval-set /Users/chuchu/testPlugin/evals/trigger-eval.json \
+  --skill-path /Users/chuchu/testPlugin/skills/pdf-spec-organizer \
+  --model claude-opus-4-7 \
+  --max-iterations 5 \
+  --verbose
+```
+
+- 20개 쿼리 중 12개는 train, 8개는 held-out test (60/40 분할)
+- 각 쿼리 3회 실행하여 트리거 비율 평균
+- 반복 최대 5회, 최고 test score 의 description 선정
+- 완료되면 HTML 리포트가 브라우저에 열림
+- 결과의 `best_description` 을 `SKILL.md` frontmatter 에 반영하여 커밋
+
 ### 수동 QA
 
 릴리스 전 [`docs/manual-qa.md`](docs/manual-qa.md) 체크리스트 전 항목 확인.
@@ -318,8 +340,10 @@ pytest tests/ -v
 
 ## 문서
 
-- **설계 스펙**: [`docs/superpowers/specs/2026-04-19-pdf-spec-organizer-design.md`](docs/superpowers/specs/2026-04-19-pdf-spec-organizer-design.md)
-- **구현 계획**: [`docs/superpowers/plans/2026-04-19-pdf-spec-organizer.md`](docs/superpowers/plans/2026-04-19-pdf-spec-organizer.md)
+- **설계 스펙 (v0.1)**: [`docs/superpowers/specs/2026-04-19-pdf-spec-organizer-design.md`](docs/superpowers/specs/2026-04-19-pdf-spec-organizer-design.md)
+- **구현 계획 (v0.1)**: [`docs/superpowers/plans/2026-04-19-pdf-spec-organizer.md`](docs/superpowers/plans/2026-04-19-pdf-spec-organizer.md)
+- **설계 스펙 (skill refactor)**: [`docs/superpowers/specs/2026-04-19-pdf-spec-organizer-skill-refactor-design.md`](docs/superpowers/specs/2026-04-19-pdf-spec-organizer-skill-refactor-design.md)
+- **구현 계획 (skill refactor)**: [`docs/superpowers/plans/2026-04-19-pdf-spec-organizer-skill-refactor.md`](docs/superpowers/plans/2026-04-19-pdf-spec-organizer-skill-refactor.md)
 - **수동 QA**: [`docs/manual-qa.md`](docs/manual-qa.md)
 - **변경 내역**: [`CHANGELOG.md`](CHANGELOG.md)
 

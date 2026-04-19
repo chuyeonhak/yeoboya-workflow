@@ -1,0 +1,22 @@
+[
+  {"query": "/spec-from-pdf ~/Downloads/설정.pdf", "should_trigger": true},
+  {"query": "이 기획서 PDF 좀 정리해서 노션에 올려줘. 파일은 ~/Downloads/알림설정_v3.pdf 이거야. iOS랑 Android 팀이 같이 봐야돼", "should_trigger": true},
+  {"query": "PM이 방금 보낸 피처 스펙 정리해줘. 에러 케이스랑 오프라인 처리 누락됐는지도 체크해줘", "should_trigger": true},
+  {"query": "이 PRD 문서 spec 페이지로 만들어 주세요. Notion database에 들어갈 수 있게요. ~/Docs/feature_prd.pdf", "should_trigger": true},
+  {"query": "이 PDF에서 접근성이랑 빈 상태 UI 누락됐는지 체크하고 피처 페이지로 정리해줘", "should_trigger": true},
+  {"query": "iOS랑 Android 같이 볼 수 있게 피처 스펙 공유 페이지 만들어. 각 플랫폼 개발자가 노트 남길 수 있는 구조로", "should_trigger": true},
+  {"query": "이거 받은 기획서인데 정리 좀... 완전 raw 상태야 ㅠㅠ ~/Downloads/new_feature_draft.pdf", "should_trigger": true},
+  {"query": "기존 노션 페이지에 Android 구현 노트 추가하고 싶어. https://www.notion.so/workspace/알림-설정-abc123 여기야", "should_trigger": true},
+  {"query": "~/Downloads/새로운-피처-스펙.pdf 이거 처리해줘", "should_trigger": true},
+  {"query": "우리 팀 iOS 개발자가 먼저 스펙 올려놨는데 같은 페이지에 내가 Android 노트 남길 수 있어?", "should_trigger": true},
+  {"query": "이 PDF 요약해줘 ~/Downloads/paper.pdf. 연구 논문이야", "should_trigger": false},
+  {"query": "이 API 스펙을 OpenAPI 문서로 만들어줘. /api/v2 엔드포인트들 다 정리해서", "should_trigger": false},
+  {"query": "이 내용을 노션에 페이지로 저장해줘: '회의록 2026-04-19 — 참석자 김철수, 이영희...'", "should_trigger": false},
+  {"query": "이 PDF를 Confluence에 올려줘. ~/Docs/quarterly_report.pdf", "should_trigger": false},
+  {"query": "이 스크린샷에서 텍스트 추출해줘. ~/Screenshots/error_dialog.png", "should_trigger": false},
+  {"query": "이 PDF를 슬라이드로 만들어줘. Keynote나 파워포인트 형식으로", "should_trigger": false},
+  {"query": "이 기획서 PDF를 영어로 번역해줘. 해외 팀에 공유해야 돼", "should_trigger": false},
+  {"query": "이 여권 스캔 정리해서 노션에 저장해줘. ~/Documents/passport.pdf", "should_trigger": false},
+  {"query": "코드 리뷰 체크리스트 만들어줘. 우리 팀 PR 리뷰 기준으로", "should_trigger": false},
+  {"query": "iOS 알림 권한 요청 구현해줘. UNUserNotificationCenter 쓰는 방식으로", "should_trigger": false}
+]
