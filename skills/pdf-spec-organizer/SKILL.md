@@ -14,10 +14,14 @@ allowed-tools: Bash Read Write Edit Grep Glob mcp__claude_ai_Notion__notion-sear
 
 ### 1. 인자 확인
 
+**왜:** PDF 경로가 없으면 이후 Phase 전체가 실패함. 진입점에서 빠르게 차단해 /tmp 낭비와 잘못된 상태 방지.
+
 - 필수: `PDF_PATH` 환경 변수 또는 커맨드 인자
 - 경로가 파일이 아니면 중단 + 구체 메시지
 
 ### 2. 팀 공유 설정 확인
+
+**왜:** 팀원들이 각자 다른 Notion DB 에 피처를 만들면 iOS/Android 가 서로 못 봄. 레포에 커밋된 설정이 "팀의 단일 DB" 를 보장.
 
 - **현재 워크스페이스 레포 루트**에서 `yeoboya-work-flow.config.json` 을 찾는다.
 - 없으면 다음 메시지로 중단:
@@ -33,6 +37,8 @@ allowed-tools: Bash Read Write Edit Grep Glob mcp__claude_ai_Notion__notion-sear
 
 ### 3. Python 의존성 확인
 
+**왜:** 후속 스크립트들이 모두 PyPDF2/pdf2image/yaml 등을 import. Phase 1 중간에 실패하면 초안 일관성이 깨지고 사용자 혼란 유발.
+
 Run (Bash):
 ```bash
 python3 -c "import PyPDF2, pdf2image, PIL, yaml, pytesseract" 2>&1
@@ -46,6 +52,8 @@ python3 -c "import PyPDF2, pdf2image, PIL, yaml, pytesseract" 2>&1
 
 ### 4. Tesseract 확인 (경고만, 차단 아님)
 
+**왜:** 이미지 전용 PDF 에서만 필요. 텍스트 PDF 는 Tesseract 없이도 정상 동작하므로 강제하지 않음 — 경고로 알리기만.
+
 Run: `command -v tesseract`
 
 없으면 경고만:
@@ -56,6 +64,8 @@ Run: `command -v tesseract`
 ```
 
 ## Phase 1 — 파싱
+
+**왜:** 후속 Phase 는 모두 파싱 결과를 읽음. 여기서 실패하면 뒤는 무의미. 이미지 추출 / OCR fallback / PII 스캔을 이 Phase 에 몰아서 한 번만 처리해 효율 확보.
 
 ### 1-1. 임시 작업 폴더 생성
 
@@ -149,6 +159,8 @@ print('\n'.join(p['text'] for p in data['pages']))
 
 ## Phase 2 — 구조화 + 개입 ①
 
+**왜:** PDF 를 자동으로 피처 단위로 쪼개는 건 Claude 의 추정이라 실수 가능. 개발자가 한 번 검증해야 잘못된 구조로 Notion 이 오염되지 않음.
+
 ### 2-1. Claude 에게 피처 추출 지시
 
 Phase 1 산출물(`parsed.json` + `ocr.json` + 이미지 썸네일)을 읽어 **피처 리스트**를 생성한다.
@@ -220,6 +232,8 @@ python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/draft_registry.
 
 ## Phase 3 — 누락 체크
 
+**왜:** 기획서가 엣지케이스(에러/빈상태/오프라인 등) 를 빠뜨리는 건 흔함. 표준 체크리스트로 구현 단계 리스크를 사전 감소. 체크 자체는 자동, 해석/대응은 개발자 노트에서.
+
 ### 3-1. 체크리스트 로드
 
 ```bash
@@ -279,6 +293,8 @@ print(json.dumps({'items': items, 'source': source}))
 ```
 
 ## Phase 4 — 개발자 노트 + 미리보기 + 개입 ②
+
+**왜:** 기술 판단(iOS/Android 구현 차이, 엣지케이스, 팀 간 질문거리) 은 Claude 가 대신할 수 없는 영역. 이 단계가 스킬의 핵심 가치 — 팀 지식을 축적하는 지점.
 
 ### 4-1. 초안 md 파일 렌더
 
@@ -344,6 +360,8 @@ print(json.dumps({'items': items, 'source': source}))
 - `e` → 4-2 로 돌아감
 
 ## Phase 5 — 충돌 처리 + 퍼블리시 + 개입 ③
+
+**왜:** iOS/Android 개발자가 같은 PDF 를 따로 돌릴 수 있음. 병합 기본값으로 타 플랫폼 노트를 실수로 지우는 상황을 방지 — 팀 협업의 파괴적 동시성 리스크 차단.
 
 ### 5-1. DB ID 확보
 
