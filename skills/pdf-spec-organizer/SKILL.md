@@ -1,6 +1,6 @@
 ---
 name: pdf-spec-organizer
-description: 복합 PDF 스펙(PRD+디자인+플로우)을 파싱해 Notion 피처 DB 페이지로 정리한다. 명세 누락 체크 + iOS/Android 플랫폼별 개발자 노트 공유. /spec-from-pdf, /spec-update, /spec-resume 커맨드의 실제 로직.
+description: 기획자/PM 에게 받은 PDF 스펙(PRD, 디자인 시안, 유저 플로우) 을 Notion 피처 DB 페이지로 정리한다. 명세 누락 (에러/빈상태/오프라인/권한/로딩/접근성) 을 자동 체크하고 iOS/Android 팀이 같은 페이지에서 플랫폼별 개발자 노트를 공유하도록 구조화한다. 사용자가 "이 PDF 정리해줘", "기획서 스펙 정리", "피처 스펙 노션에 올려줘", "개발자 노트 정리", "명세 누락 체크해줘" 같은 요청을 하거나 기획 PDF 문서를 언급할 때 반드시 이 스킬을 사용할 것. 슬래시 커맨드 `/spec-from-pdf`, `/spec-update`, `/spec-resume` 의 실제 구현 로직.
 allowed-tools: Bash Read Write Edit Grep Glob mcp__claude_ai_Notion__notion-search mcp__claude_ai_Notion__notion-fetch mcp__claude_ai_Notion__notion-create-pages mcp__claude_ai_Notion__notion-create-database mcp__claude_ai_Notion__notion-update-page mcp__claude_ai_Notion__notion-update-data-source
 ---
 
@@ -347,57 +347,16 @@ print(json.dumps({'items': items, 'source': source}))
 
 ### 5-1. DB ID 확보
 
-Precondition 에서 읽은 `notion_database_id` 사용. 없으면 Phase 0에서 이미 중단됐을 것이므로 여기서는 존재 가정.
+Precondition 2 에서 읽은 `notion_database_id` 사용. 존재 가정.
 
 ### 5-2. 피처별 루프
 
 각 피처에 대해:
 
-#### 5-2-a. 기존 페이지 조회
-
-`mcp__claude_ai_Notion__notion-search` 로 **DB ID 필터 + 제목 완전 일치** 쿼리. 결과 있으면 충돌 처리로, 없으면 새로 생성.
-
-#### 5-2-b. 충돌 시
-
-`references/conflict-policy.md` 의 정책에 따라 프롬프트:
-
-```
-Notion 에 같은 피처가 이미 존재합니다:
-  제목: <피처명>
-  최근 생성자: <author>
-  생성일: <date>
-  기존 PDF 해시: <hash or "없음">  (현재: <my_hash>)
-
-어떻게 할까요?
-  [1] 병합 (내 플랫폼 섹션만 append) ← 기본
-  [2] 덮어쓰기 (기존 노트 손실 가능)
-  [3] 새 버전 (이전_버전 Relation 으로 연결)
-  [4] 건너뛰기 (이 피처만 스킵)
->
-```
-
-**`--fast` 플래그:** `[1] 병합` 자동 선택. [2]/[3]/[4] 는 `--fast` 에서도 프롬프트 발생.
-
-- **병합**: `mcp__claude_ai_Notion__notion-fetch` 로 기존 페이지 본문 읽기 → 내 플랫폼 섹션만 교체 → `mcp__claude_ai_Notion__notion-update-page` 로 업데이트
-- **덮어쓰기**: "정말로 덮어쓰시겠습니까? (y/N)" 추가 확인 → yes 면 전체 본문 교체
-- **새 버전**: 새 페이지 생성 + 새 페이지의 `이전_버전` Relation 에 기존 페이지 연결
-- **건너뛰기**: 다음 피처로
-
-#### 5-2-c. 충돌 없으면 새 페이지 생성
-
-`mcp__claude_ai_Notion__notion-create-pages` 로 생성:
-- 속성: 이름, 플랫폼, 상태=Draft, 원본_PDF=파일명만, PDF_해시, 생성자=현재 사용자, 누락_항목=`missing` 리스트
-- 본문: `draft.md` 의 Notion 대응 블록으로 변환
-
-#### 5-2-d. 이미지 업로드
-
-각 피처의 `screens` 이미지 경로를 Notion 파일 업로드 API 로 올려 `image` 블록으로 삽입.
-
-**Notion MCP 의 파일 업로드 지원 여부 점검:**
-- `mcp__claude_ai_Notion__notion-create-pages` 가 로컬 파일 경로를 직접 지원하지 않는 경우 대비:
-  - 1차: 이미지 블록에 placeholder URL 삽입 + 캡션에 로컬 경로 주석으로 표시
-  - 2차 (v0.2 계획): S3/imgur 중계 업로더 추가. 지금은 placeholder + 경고.
-- 이 대응은 `docs/manual-qa.md` 의 이슈로도 문서화.
+1. `mcp__claude_ai_Notion__notion-search` 로 DB 안에서 동명 피처 조회
+2. **존재 시** → `references/conflict-policy.md` 의 **"Phase 5 충돌 처리"** 섹션을 따라 사용자 프롬프트 + 옵션 실행
+3. **없음 시** → `mcp__claude_ai_Notion__notion-create-pages` 로 새 페이지 생성. 속성: 이름 / 플랫폼 / 상태=Draft / 원본_PDF=파일명만 / PDF_해시 / 생성자=현재 사용자 / 누락_항목=`missing` 리스트. 본문: `draft.md` 의 Notion 블록 변환본.
+4. **이미지 첨부** → `references/conflict-policy.md` 의 **"이미지 업로드 전략"** 섹션을 따라 처리 (placeholder fallback 포함)
 
 ### 5-3. 실행 기록 갱신
 
@@ -407,7 +366,7 @@ python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/draft_registry.
   update-status --draft-path "$DRAFT_PATH" --status success
 ```
 
-부분 실패 시 failed 기록 + 실패 피처 목록을 터미널에 표시 + `/spec-resume` 가이드:
+부분 실패 시 `failed` 기록 + 실패 피처 목록 터미널 표시 + `/spec-resume` 가이드:
 ```
 ⚠️  3개 중 2개 피처만 퍼블리시됐습니다:
   ✓ 알림 설정 화면
@@ -432,7 +391,7 @@ python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/draft_registry.
 
 ### 5-5. GC 트리거
 
-기회적 GC (성공 시만):
+성공 시만 기회적 gc:
 ```bash
 python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/draft_registry.py" gc
 ```
