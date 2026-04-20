@@ -634,3 +634,62 @@ python3 "/Users/chuchu/testPlugin/skills/pdf-spec-organizer/scripts/feature_id.p
 ### U-7. 락 해제
 
 정상 종료 → `editing_lock` 주석 블록 제거. 예외 종료 시 TTL 5분 후 자동 만료 (다음 `/spec-update` 진입 시 판별).
+
+## 마이그레이션 (`migrate_to_per_pdf.py`)
+
+v1→v2 전환 시 **1회성** 도구. 기존 피처 페이지들을 PDF 단위 페이지로 통합한다.
+
+### 1. 준비
+
+- 사용 전 Notion DB 에 property 추가 필요:
+  - `migrated_to` (URL)
+  - `archived` (Checkbox)
+- 한 번만 추가하면 이후 실행에 계속 활용. 명령:
+  ```
+  mcp__claude_ai_Notion__notion-update-data-source
+    data_source_id: <id>
+    statements: 'ADD COLUMN "migrated_to" URL; ADD COLUMN "archived" CHECKBOX'
+  ```
+
+### 2. 페이지 덤프 수집
+
+현재 DB 의 모든 피처 페이지를 JSON 으로 덤프:
+
+```bash
+# Claude 오케스트레이션:
+# 1) mcp__claude_ai_Notion__notion-fetch id=collection://<data_source_id>
+# 2) 페이지마다 mcp__claude_ai_Notion__notion-fetch id=<page_id>, body 저장
+# 3) 모든 결과를 ${WORK_DIR}/pages.json 으로 통합
+#    형식: { "pages": [ { "id", "title", "properties", "content", "last_edited_time" } ] }
+```
+
+### 3. 드라이런
+
+```bash
+python3 "/Users/chuchu/testPlugin/skills/pdf-spec-organizer/scripts/migrate_to_per_pdf.py" \
+  --pages-file "${WORK_DIR}/pages.json" \
+  --dry-run \
+  --report "${WORK_DIR}/migration-report.md"
+```
+
+`migration-report.md` 를 검토해 그룹 묶임/orphan 판정 여부 확인.
+
+### 4. Apply (Claude 오케스트레이션)
+
+드라이런 결과를 소비해 Claude 가 각 그룹에 대해:
+
+1. Toggle 블록 조립 (기존 피처 페이지 본문 → v2 draft 포맷)
+2. 노트 섹션 보존 + 작성자 메타 주석 (`<!-- author: <user>, <date> -->`)
+3. 새 feature_id 부여 (`feature_id.py assign`)
+4. 새 PDF 페이지 생성 (`notion-create-pages`)
+5. 각 소스 페이지의 property 갱신:
+   - `migrated_to` ← 새 페이지 URL
+   - `archived` ← true
+
+### 5. idempotency
+
+스크립트는 `archived=true` 페이지를 `skipped_archived` 로 카운트. 2회 이상 실행해도 동일 그룹이 중복 생성되지 않는다.
+
+### 6. orphan 처리
+
+해시/파일명 모두 없는 페이지는 `migration-report.md` 에 목록으로 출력. 수동으로 새 PDF 페이지에 통합하거나 archived 처리.
