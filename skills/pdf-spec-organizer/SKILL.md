@@ -294,27 +294,37 @@ print(json.dumps({'items': items, 'source': source}))
 
 ## Phase 4 — 개발자 노트 + 미리보기 + 개입 ②
 
-**왜:** 기술 판단(iOS/Android 구현 차이, 엣지케이스, 팀 간 질문거리) 은 Claude 가 대신할 수 없는 영역. 이 단계가 스킬의 핵심 가치 — 팀 지식을 축적하는 지점.
+**왜:** 기술 판단(iOS/Android 구현 차이, 엣지케이스, 팀 간 질문거리) 은 Claude 가 대신할 수 없는 영역. 이 단계가 스킬의 핵심 가치 — 팀 지식을 축적하는 지점. v2 부터는 PDF 1개 = 초안 1개 = Notion 페이지 1개 구조이므로 모든 피처 노트를 **한 파일 안에서** 한 번에 작성한다.
 
-### 4-1. 초안 md 파일 렌더
+### 4-1. feature_id 할당
 
-`features.json` + `missing.json` + `parsed.json` 을 통합해 `${DRAFT_PATH}` 로 저장.
-포맷은 `references/review-format.md` 의 "초안 파일 구조" 를 엄격히 따른다.
+```bash
+python3 "/Users/chuchu/testPlugin/skills/pdf-spec-organizer/scripts/feature_id.py" \
+  assign --features-file "${WORK_DIR}/features.json"
+```
+
+- 새 피처에 UUID4 를 부여한다
+- 이미 `feature_id` 가 있는 피처는 건드리지 않음 (Phase 2 의 rename/merge/split 이후에도 id 는 유지)
+
+### 4-2. 초안 md 파일 렌더
+
+`features.json` + `missing.json` + `parsed.json` 을 통합해 `${DRAFT_PATH}` 로 저장. 포맷은 `references/review-format.md` 의 "초안 파일 구조" 를 엄격히 따른다.
 
 **중요:**
-- 헤더 `<!-- plugin-state ... -->` 에 `phase: 4`, `pdf_hash`, `source_file`, `created_at` 포함
-- 각 피처마다 iOS/Android/공통 노트 섹션은 **빈 상태**로 렌더 (사용자가 채움)
+- `<!-- plugin-state -->` 헤더에 `phase: 4`, `pdf_hash`, `source_file`, `created_at`, `publish_state: idle`, `page_id:` (빈 값), `last_block_sentinel_id:` (빈 값) 포함
+- 각 피처는 Toggle heading (`### N. <name> {toggle="true"}`) 로 렌더
+- 각 Toggle 첫 줄 아래에 `<!-- feature_id: <uuid> -->` 주석 삽입
+- iOS / Android / 공통 노트 섹션은 `<!-- notes_*_start/end -->` 마커로 감싸고 **빈 상태** (`<empty-block/>`) 로 렌더
+- 각 Toggle 끝에 `<!-- publish_sentinel: feature_<short-id>_done -->` 삽입
 - `--fast` 플래그여도 이 Phase 는 생략되지 않음
 
-### 4-2. 사용자에게 노트 작성 프롬프트
+### 4-3. 사용자에게 노트 작성 프롬프트
 
 ```
 다음 단계: 개발자 노트 작성
 
 초안 파일: /tmp/spec-draft-<hash>-<ts>/draft.md
-
-당신의 플랫폼 섹션(iOS / Android / 공통)만 채우세요.
-타 플랫폼 섹션은 Phase 5 병합 시 보존됩니다.
+(피처 7개가 Toggle 블록으로 들어있습니다. 담당 플랫폼 섹션만 채우세요.)
 
 어떻게 할까요?
   e) 에디터($EDITOR)로 열기  ← 권장
@@ -323,29 +333,29 @@ print(json.dumps({'items': items, 'source': source}))
 >
 ```
 
-`e` 선택 시 `$EDITOR` 로 열기. macOS 기본값이 없으면 `code` / `vim` 순으로 시도.
+`e` 선택 시 `$EDITOR` 로 열기. 값이 없으면 `code` / `vim` 순으로 시도.
 
-### 4-3. 저장 후 검증
+### 4-4. 저장 후 검증
 
 에디터 종료 후:
 - 파일 존재 확인
-- `plugin-state` 헤더 파싱해 `phase` 업데이트
-- 노트 섹션이 완전히 비어도 경고만 표시 (계속 가능):
+- `plugin-state` 헤더 파싱 → `phase` 를 5 로 업데이트
+- 노트 섹션이 전부 비어도 경고만 표시 (계속 가능):
   ```
   ℹ️  노트가 비어있습니다. Phase 5 로 계속할까요? (y/n/e)
   ```
   `e` 는 다시 에디터 열기.
 
-### 4-4. 최종 미리보기
+### 4-5. 최종 미리보기
 
-터미널에 초안 요약 출력:
 ```
 미리보기:
 
-  피처 3개, 누락 항목 5개, 노트:
-    - 알림 설정 화면: iOS ✓, Android ✗, 공통 ✓
-    - 푸시 권한 요청 플로우: iOS ✓, Android ✗, 공통 ✗
-    - 빈 상태 UI: iOS ✗, Android ✗, 공통 ✗
+  PDF: <filename>
+  피처 7개, 누락 항목 35개, 노트:
+    - 앱 시작 플로우 개방: iOS ✓, Android ✗, 공통 ✗
+    - 메인화면 비로그인 UI 제어: iOS ✓, Android ✓, 공통 ✗
+    ...
 
   Notion 에 퍼블리시할까요?
     y) 퍼블리시
@@ -354,10 +364,10 @@ print(json.dumps({'items': items, 'source': source}))
 >
 ```
 
-### 4-5. 취소 / 에디터 재진입 처리
+### 4-6. 취소 / 에디터 재진입 처리
 
-- `c` → Phase 5 로 가기 전 정리 (상태 failed 로 기록)
-- `e` → 4-2 로 돌아감
+- `c` → Phase 5 진입 전 정리 (`draft_registry update-status --status failed`)
+- `e` → 4-3 으로 돌아감
 
 ## Phase 5 — 충돌 처리 + 퍼블리시 + 개입 ③
 
