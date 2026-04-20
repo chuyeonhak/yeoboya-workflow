@@ -1,5 +1,26 @@
 # Changelog
 
+## v0.2.0 — 2026-04-20
+
+### Changed
+- `pdf-spec-organizer`: 1 PDF = 1 Notion page (with features as Toggle blocks). v1 per-feature page behavior removed.
+- `/spec-update`: new `--feature="<name>"` flag for toggle-level edit.
+- `/spec-resume`: partial-append resume via `publish_state` + sentinel markers.
+- Notion page body format updated: `feature_id`, `notes_*_start|end`, `publish_sentinel` markers.
+
+### Added
+- `scripts/feature_id.py` — UUID4 generation + name resolution.
+- `scripts/note_extractor.py` — parse notes by `feature_id`.
+- `scripts/note_merger.py` — inject preserved notes into new draft.
+- `scripts/page_publisher.py` — chunked block payload + sentinel-based resume cursor.
+- `scripts/migrate_to_per_pdf.py` — one-time consolidation planner (dry-run).
+- `draft_registry.py`: `page_id`, `publish_state` fields, `partial_success` status.
+
+### Migration
+- v1 per-feature pages are consolidated via `migrate_to_per_pdf.py` dry-run + SKILL-orchestrated apply.
+- New DB properties required: `migrated_to` (URL), `archived` (Checkbox).
+- v1 drafts (`phase: 4`) fall back to full re-publish on `/spec-resume`.
+
 모든 주목할 만한 변경 사항을 이 파일에 기록합니다.
 
 ## [0.1.1] - 2026-04-19
