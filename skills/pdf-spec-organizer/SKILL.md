@@ -235,7 +235,7 @@ python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/draft_registry.
 Phase 2 의 모든 분기(split/merge/rename) 가 확정되면 `feature_id.py assign` 으로 UUID 부여:
 
 ```bash
-python3 "/Users/chuchu/testPlugin/skills/pdf-spec-organizer/scripts/feature_id.py" assign \
+python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/feature_id.py" assign \
   --features-file "${WORK_DIR}/features.json"
 ```
 
@@ -315,7 +315,7 @@ print(json.dumps({'items': items, 'source': source}))
 ### 4-1. feature_id 할당
 
 ```bash
-python3 "/Users/chuchu/testPlugin/skills/pdf-spec-organizer/scripts/feature_id.py" \
+python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/feature_id.py" \
   assign --features-file "${WORK_DIR}/features.json"
 ```
 
@@ -408,13 +408,13 @@ python3 "/Users/chuchu/testPlugin/skills/pdf-spec-organizer/scripts/feature_id.p
 # mcp__claude_ai_Notion__notion-create-pages 호출 → page_id 획득
 
 # 2) draft.md 본문을 chunks 로 분할
-python3 "/Users/chuchu/testPlugin/skills/pdf-spec-organizer/scripts/page_publisher.py" chunk \
+python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/page_publisher.py" chunk \
   --input "${DRAFT_PATH}" --max-blocks 80 > "${WORK_DIR}/chunks.json"
 
 # 3) plugin-state 업데이트
 #    publish_state=page_created
 #    page_id=<notion page id>
-python3 "/Users/chuchu/testPlugin/skills/pdf-spec-organizer/scripts/draft_registry.py" update-status \
+python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/draft_registry.py" update-status \
   --draft-path "${DRAFT_PATH}" \
   --status running \
   --page-id "${PAGE_ID}" \
@@ -440,11 +440,11 @@ python3 "/Users/chuchu/testPlugin/skills/pdf-spec-organizer/scripts/draft_regist
 # 결과를 ${WORK_DIR}/existing_body.md 로 저장
 
 # 2) 노트 추출
-python3 "/Users/chuchu/testPlugin/skills/pdf-spec-organizer/scripts/note_extractor.py" \
+python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/note_extractor.py" \
   < "${WORK_DIR}/existing_body.md" > "${WORK_DIR}/preserved_notes.json"
 
 # 3) 새 draft 에 병합
-python3 "/Users/chuchu/testPlugin/skills/pdf-spec-organizer/scripts/note_merger.py" \
+python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/note_merger.py" \
   --draft "${DRAFT_PATH}" \
   --notes "${WORK_DIR}/preserved_notes.json"
 
@@ -466,7 +466,7 @@ python3 "/Users/chuchu/testPlugin/skills/pdf-spec-organizer/scripts/note_merger.
 
 성공:
 ```bash
-python3 "/Users/chuchu/testPlugin/skills/pdf-spec-organizer/scripts/draft_registry.py" update-status \
+python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/draft_registry.py" update-status \
   --draft-path "${DRAFT_PATH}" \
   --status success \
   --publish-state complete
@@ -474,7 +474,7 @@ python3 "/Users/chuchu/testPlugin/skills/pdf-spec-organizer/scripts/draft_regist
 
 부분 실패 (chunk 도중 중단):
 ```bash
-python3 "/Users/chuchu/testPlugin/skills/pdf-spec-organizer/scripts/draft_registry.py" update-status \
+python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/draft_registry.py" update-status \
   --draft-path "${DRAFT_PATH}" \
   --status partial_success \
   --publish-state chunks_appending
@@ -502,7 +502,7 @@ python3 "/Users/chuchu/testPlugin/skills/pdf-spec-organizer/scripts/draft_regist
 
 GC 트리거:
 ```bash
-python3 "/Users/chuchu/testPlugin/skills/pdf-spec-organizer/scripts/draft_registry.py" gc
+python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/draft_registry.py" gc
 ```
 `partial_success` 는 7일 보존 (GC 대상 아님) 이므로 자연스럽게 `/spec-resume` 시나리오 보호.
 
@@ -549,7 +549,7 @@ python3 "/Users/chuchu/testPlugin/skills/pdf-spec-organizer/scripts/draft_regist
 #   >
 
 # 2) 페이지 본문 fetch → sentinel 스캔
-python3 "/Users/chuchu/testPlugin/skills/pdf-spec-organizer/scripts/page_publisher.py" find-sentinel \
+python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/page_publisher.py" find-sentinel \
   --input "${WORK_DIR}/existing_body.md" > "${WORK_DIR}/sentinel.json"
 
 # 3) last_chunk_index 읽기:
@@ -600,7 +600,7 @@ python3 "/Users/chuchu/testPlugin/skills/pdf-spec-organizer/scripts/page_publish
 `$FEATURE_NAME` 이 지정된 경우:
 
 ```bash
-python3 "/Users/chuchu/testPlugin/skills/pdf-spec-organizer/scripts/feature_id.py" resolve \
+python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/feature_id.py" resolve \
   --features-file "${WORK_DIR}/features.json" \
   --name "$FEATURE_NAME" > "${WORK_DIR}/resolved.json" 2> "${WORK_DIR}/resolve_err.txt"
 
@@ -682,7 +682,7 @@ v1→v2 전환 시 **1회성** 도구. 기존 피처 페이지들을 PDF 단위 
 ### 3. 드라이런
 
 ```bash
-python3 "/Users/chuchu/testPlugin/skills/pdf-spec-organizer/scripts/migrate_to_per_pdf.py" \
+python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/migrate_to_per_pdf.py" \
   --pages-file "${WORK_DIR}/pages.json" \
   --dry-run \
   --report "${WORK_DIR}/migration-report.md"
