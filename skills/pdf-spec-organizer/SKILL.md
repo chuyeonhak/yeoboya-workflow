@@ -496,20 +496,67 @@ python3 "/Users/chuchu/testPlugin/skills/pdf-spec-organizer/scripts/draft_regist
 
 ### R-1. 초안 선택
 
-- `--resume-latest`: `draft_registry list-latest --count 5` 결과에서 **`status` 가 `running` 또는 `failed`** 인 최신 항목 자동 선택. 없으면 사용자에게 리스트 보여주고 선택받기.
+- `--resume-latest`: `draft_registry list-latest --count 10` 결과에서 **`status` 가 `running` / `partial_success` / `failed`** 인 최신 항목 자동 선택. 없으면 사용자에게 리스트 보여주고 선택받기.
 - `--resume <path>`: 지정된 경로 사용. 없으면 중단.
 
 ### R-2. 상태 복구
 
-초안 파일의 `<!-- plugin-state -->` 헤더에서 `phase` 를 읽어 다음 Phase 부터 시작:
-- `phase: 1` → Phase 2 부터 재실행
-- `phase: 2` → Phase 3 부터
-- `phase: 3` → Phase 4 부터
-- `phase: 4` → Phase 5 부터
+초안의 `<!-- plugin-state -->` 헤더 파싱.
 
-### R-3. 실행
+#### R-2-a. 레거시 v1 draft 감지
 
-해당 Phase 부터 본 워크플로우와 동일하게 진행. 마지막에 `update-status` 갱신.
+`publish_state` 필드 자체가 없으면 v1 초안:
+```
+ℹ️  v1 초안이 감지됐습니다. 전체 재퍼블리시로 진행합니다.
+  (Phase 1 부터 다시 실행됨 — 구 피처별 페이지 모델로의 resume 은 지원되지 않음)
+```
+→ Phase 4 부터 v2 플로우로 재시작.
+
+#### R-2-b. v2 draft 의 `publish_state` 별 분기
+
+- `idle` / `<empty>`: Phase 5 진입 (Phase 4 도 필요하면 사용자 선택)
+- `page_created`: chunks_appending 단계부터 재개. 필요하면 shell 페이지 재검증 (R-3)
+- `chunks_appending`: shell 페이지 재검증 후 sentinel-based 재개 (R-3)
+- `complete`: "이미 완료된 초안입니다. 새 실행을 원하시나요?" 프롬프트
+- `failed`: publish.log 마지막 에러 출력 → 재시도/취소 프롬프트
+
+### R-3. 페이지 재검증 및 sentinel 재개
+
+```bash
+# 1) 페이지 존재 확인
+# mcp__claude_ai_Notion__notion-fetch id=${PAGE_ID}
+# 404 → 프롬프트:
+#   ⚠️  page_id <id> 가 더 이상 존재하지 않습니다.
+#   어떻게 할까요?
+#     [1] 새 페이지로 퍼블리시
+#     [2] 취소
+#   >
+
+# 2) 페이지 본문 fetch → sentinel 스캔
+python3 "/Users/chuchu/testPlugin/skills/pdf-spec-organizer/scripts/page_publisher.py" find-sentinel \
+  --input "${WORK_DIR}/existing_body.md" > "${WORK_DIR}/sentinel.json"
+
+# 3) last_chunk_index 읽기:
+#    LAST=$(jq -r .last_chunk_index "${WORK_DIR}/sentinel.json")
+# 4) chunks.json 의 (LAST+1) 번째부터 append 재개
+# 5) complete sentinel 을 스캔했으면 publish_state=complete, status=success 로 갱신하고 종료
+```
+
+#### R-3-a. 페이지 수동 수정 감지
+
+- sentinel 이 예상 순서로 존재하지 않거나 중간 sentinel 이 누락됐다면:
+  ```
+  ⚠️  페이지가 수동 수정된 것 같습니다 (sentinel 순서 불일치).
+  어떻게 할까요?
+    [1] 새 버전으로 퍼블리시
+    [2] 현재 위치에서 강제 재개 (중복 위험)
+    [3] 취소
+  >
+  ```
+
+### R-4. 실행
+
+해당 Phase/지점부터 본 워크플로우와 동일하게 진행. 마지막에 `update-status` 갱신.
 
 ## Update 모드 (`/spec-update`)
 
