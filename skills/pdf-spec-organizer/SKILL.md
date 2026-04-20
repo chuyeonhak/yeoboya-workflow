@@ -371,58 +371,124 @@ python3 "/Users/chuchu/testPlugin/skills/pdf-spec-organizer/scripts/feature_id.p
 
 ## Phase 5 — 충돌 처리 + 퍼블리시 + 개입 ③
 
-**왜:** iOS/Android 개발자가 같은 PDF 를 따로 돌릴 수 있음. 병합 기본값으로 타 플랫폼 노트를 실수로 지우는 상황을 방지 — 팀 협업의 파괴적 동시성 리스크 차단.
+**왜:** v2 는 PDF 1개 = 페이지 1개. 동일 PDF 재실행·업데이트 PDF·동시 편집 같은 상황을 안전하게 처리해야 한다. 또한 Notion API 의 per-call block 제한 때문에 chunked publish + sentinel 기반 resume 이 필수.
 
-### 5-1. DB ID 확보
+### 5-1. DB ID / 파일명 확보
 
-Precondition 2 에서 읽은 `notion_database_id` 사용. 존재 가정.
+- Notion DB data source ID: Precondition 2 에서 읽은 `notion_database_id` 와 config 의 `notion_data_source_id` 사용
+- `PDF_FILENAME=$(basename "$PDF_PATH")` 만 저장 (홈 경로 노출 방지)
 
-### 5-2. 피처별 루프
+### 5-2. Dedup 조회
 
-각 피처에 대해:
+1. `mcp__claude_ai_Notion__notion-search` 로 `data_source_url=collection://<data_source_id>`, query=`<PDF 해시>` 검색 (title + PDF 해시 property 매칭)
+2. 해시 일치 페이지 있음 → 1a. "동일 PDF 재실행" 프롬프트 (`references/conflict-policy.md` 참조)
+3. 해시 불일치 + 같은 파일명 페이지 있음 → 1b. "업데이트된 PDF" 프롬프트
+4. 모두 없음 → 5-3 새 페이지 플로우
 
-1. `mcp__claude_ai_Notion__notion-search` 로 DB 안에서 동명 피처 조회
-2. **존재 시** → `references/conflict-policy.md` 의 **"Phase 5 충돌 처리"** 섹션을 따라 사용자 프롬프트 + 옵션 실행
-3. **없음 시** → `mcp__claude_ai_Notion__notion-create-pages` 로 새 페이지 생성. 속성: 이름 / 플랫폼 / 상태=Draft / 원본_PDF=파일명만 / PDF_해시 / 생성자=현재 사용자 / 누락_항목=`missing` 리스트. 본문: `draft.md` 의 Notion 블록 변환본.
-4. **이미지 첨부** → `references/conflict-policy.md` 의 **"이미지 업로드 전략"** 섹션을 따라 처리 (placeholder fallback 포함)
+### 5-3. 새 페이지 퍼블리시 (신규 경로)
 
-### 5-3. 실행 기록 갱신
-
-모든 피처 성공 시:
 ```bash
-python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/draft_registry.py" \
-  update-status --draft-path "$DRAFT_PATH" --status success
+# 1) shell 페이지 생성 (제목/properties/개요만)
+# mcp__claude_ai_Notion__notion-create-pages 호출 → page_id 획득
+
+# 2) draft.md 본문을 chunks 로 분할
+python3 "/Users/chuchu/testPlugin/skills/pdf-spec-organizer/scripts/page_publisher.py" chunk \
+  --input "${DRAFT_PATH}" --max-blocks 80 > "${WORK_DIR}/chunks.json"
+
+# 3) plugin-state 업데이트
+#    publish_state=page_created
+#    page_id=<notion page id>
+python3 "/Users/chuchu/testPlugin/skills/pdf-spec-organizer/scripts/draft_registry.py" update-status \
+  --draft-path "${DRAFT_PATH}" \
+  --status running \
+  --page-id "${PAGE_ID}" \
+  --publish-state page_created
+
+# 4) chunk 순차 append:
+#    각 chunk 에 대해 mcp__claude_ai_Notion__notion-update-page
+#    command=update_content, content_updates=[ { old_str: <last_sentinel>, new_str: <chunk_markdown> } ]
+#    (첫 chunk 는 shell 페이지의 overview 말미를 anchor 로 사용)
+#    성공 후 draft 의 plugin-state 에 last_block_sentinel_id 갱신
+#    ${WORK_DIR}/publish.log 에 timestamped 로그 기록
+#    Rate limit 발생 시 exponential backoff (1, 2, 4, 8 초, max 3 retries)
+
+# 5) 모든 chunk 성공 → publish_sentinel: complete append
+# 6) draft_registry update-status --status success --publish-state complete
 ```
 
-부분 실패 시 `failed` 기록 + 실패 피처 목록 터미널 표시 + `/spec-resume` 가이드:
+### 5-4. 덮어쓰기 (노트 보존) 경로
+
+```bash
+# 1) 기존 페이지 본문 fetch
+# mcp__claude_ai_Notion__notion-fetch id=${EXISTING_PAGE_ID}
+# 결과를 ${WORK_DIR}/existing_body.md 로 저장
+
+# 2) 노트 추출
+python3 "/Users/chuchu/testPlugin/skills/pdf-spec-organizer/scripts/note_extractor.py" \
+  < "${WORK_DIR}/existing_body.md" > "${WORK_DIR}/preserved_notes.json"
+
+# 3) 새 draft 에 병합
+python3 "/Users/chuchu/testPlugin/skills/pdf-spec-organizer/scripts/note_merger.py" \
+  --draft "${DRAFT_PATH}" \
+  --notes "${WORK_DIR}/preserved_notes.json"
+
+# 4) 덮어쓰기: replace_content 로 전체 교체
+# mcp__claude_ai_Notion__notion-update-page command=replace_content new_str=<draft body>
+# (chunk 제한이 문제되면 5-3 의 shell+chunks 경로를 동일하게 사용)
+
+# 5) properties fresh union 으로 갱신
+# mcp__claude_ai_Notion__notion-update-page command=update_properties ...
 ```
-⚠️  3개 중 2개 피처만 퍼블리시됐습니다:
-  ✓ 알림 설정 화면
-  ✓ 푸시 권한 요청 플로우
-  ✗ 빈 상태 UI (Notion API timeout)
+
+### 5-5. 새 버전 경로
+
+1. 5-3 새 페이지 플로우 동일
+2. 단, create-page 시 `이전_버전` Relation 에 기존 페이지 URL 포함
+3. 기존 페이지는 건드리지 않음
+
+### 5-6. 실행 기록 갱신
+
+성공:
+```bash
+python3 "/Users/chuchu/testPlugin/skills/pdf-spec-organizer/scripts/draft_registry.py" update-status \
+  --draft-path "${DRAFT_PATH}" \
+  --status success \
+  --publish-state complete
+```
+
+부분 실패 (chunk 도중 중단):
+```bash
+python3 "/Users/chuchu/testPlugin/skills/pdf-spec-organizer/scripts/draft_registry.py" update-status \
+  --draft-path "${DRAFT_PATH}" \
+  --status partial_success \
+  --publish-state chunks_appending
+```
+터미널:
+```
+⚠️  3 chunk 중 2 chunk 만 append 됐습니다:
+  ✓ chunk 0/2
+  ✓ chunk 1/2
+  ✗ chunk 2/2 (Notion API timeout)
 
 이어서 시도: /spec-resume --resume-latest
-초안: <draft_path>
+초안: <draft_path>  페이지: <notion_url>
 ```
 
-### 5-4. 결과 요약
+### 5-7. 결과 요약 + GC
 
-성공 시:
+성공:
 ```
 ✓ 퍼블리시 완료:
-  - 알림 설정 화면: https://notion.so/...
-  - 푸시 권한 요청 플로우: https://notion.so/...
-  - 빈 상태 UI: https://notion.so/...
+  <PDF 제목>: https://notion.so/...
 
 초안은 3일 후 자동 삭제됩니다: <draft_path>
 ```
 
-### 5-5. GC 트리거
-
-성공 시만 기회적 gc:
+GC 트리거:
 ```bash
-python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/draft_registry.py" gc
+python3 "/Users/chuchu/testPlugin/skills/pdf-spec-organizer/scripts/draft_registry.py" gc
 ```
+`partial_success` 는 7일 보존 (GC 대상 아님) 이므로 자연스럽게 `/spec-resume` 시나리오 보호.
 
 ## Resume 모드
 
