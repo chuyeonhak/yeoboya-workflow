@@ -6,19 +6,21 @@ Registry file format (JSON):
     {
       "hash": "abc123",
       "draft_path": "/tmp/spec-draft-abc123-1700000000.md",
-      "status": "running" | "success" | "failed",
+      "status": "running" | "success" | "failed" | "partial_success",
       "created_at": 1700000000.0,
-      "ttl_seconds": 604800
+      "ttl_seconds": 604800,
+      "page_id": "uuid",
+      "publish_state": "idle" | "page_created" | "chunks_appending" | "complete" | "failed"
     }
   ]
 }
 
 Subcommands:
-  record      --hash H --draft-path P --status S [--ttl-seconds N]
+  record      --hash H --draft-path P --status S [--ttl-seconds N] [--page-id PID] [--publish-state PS]
   query-recent --hash H --within-seconds N
   list-latest --count N
   gc
-  update-status --draft-path P --status S
+  update-status --draft-path P --status S [--page-id PID] [--publish-state PS]
 """
 import argparse
 import json
@@ -26,6 +28,10 @@ import os
 import sys
 import time
 from pathlib import Path
+
+
+VALID_STATUSES = ["running", "success", "failed", "partial_success"]
+VALID_PUBLISH_STATES = ["idle", "page_created", "chunks_appending", "complete", "failed"]
 
 
 def default_registry() -> Path:
@@ -50,7 +56,12 @@ def save(reg: Path, data: dict) -> None:
 
 
 def ttl_for(status: str) -> int:
-    return {"success": 3 * 86400, "failed": 7 * 86400, "running": 7 * 86400}.get(status, 7 * 86400)
+    return {
+        "success": 3 * 86400,
+        "failed": 7 * 86400,
+        "running": 7 * 86400,
+        "partial_success": 7 * 86400,  # longer retention so /spec-resume can find it
+    }.get(status, 7 * 86400)
 
 
 def cmd_record(args) -> int:
@@ -63,6 +74,10 @@ def cmd_record(args) -> int:
         "created_at": time.time(),
         "ttl_seconds": ttl,
     }
+    if args.page_id:
+        entry["page_id"] = args.page_id
+    if args.publish_state:
+        entry["publish_state"] = args.publish_state
     data["entries"].append(entry)
     save(args.registry, data)
     json.dump({"recorded": True, "entry": entry}, sys.stdout)
@@ -117,6 +132,10 @@ def cmd_update_status(args) -> int:
         if e["draft_path"] == args.draft_path:
             e["status"] = args.status
             e["ttl_seconds"] = ttl_for(args.status)
+            if args.publish_state:
+                e["publish_state"] = args.publish_state
+            if args.page_id:
+                e["page_id"] = args.page_id
             updated += 1
     save(args.registry, data)
     json.dump({"updated": updated}, sys.stdout)
@@ -134,8 +153,10 @@ def main() -> int:
     p_rec = sub.add_parser("record", parents=[common])
     p_rec.add_argument("--hash", required=True)
     p_rec.add_argument("--draft-path", required=True)
-    p_rec.add_argument("--status", required=True, choices=["running", "success", "failed"])
+    p_rec.add_argument("--status", required=True, choices=VALID_STATUSES)
     p_rec.add_argument("--ttl-seconds", type=int, default=None)
+    p_rec.add_argument("--page-id", default=None)
+    p_rec.add_argument("--publish-state", default=None, choices=VALID_PUBLISH_STATES)
     p_rec.set_defaults(func=cmd_record)
 
     p_q = sub.add_parser("query-recent", parents=[common])
@@ -152,7 +173,9 @@ def main() -> int:
 
     p_u = sub.add_parser("update-status", parents=[common])
     p_u.add_argument("--draft-path", required=True)
-    p_u.add_argument("--status", required=True, choices=["running", "success", "failed"])
+    p_u.add_argument("--status", required=True, choices=VALID_STATUSES)
+    p_u.add_argument("--publish-state", default=None, choices=VALID_PUBLISH_STATES)
+    p_u.add_argument("--page-id", default=None)
     p_u.set_defaults(func=cmd_update_status)
 
     args = parser.parse_args()

@@ -60,3 +60,60 @@ def test_gc_removes_expired(tmp_path):
 
     r2 = run_reg("list-latest", "--count", "5", registry_path=reg)
     assert json.loads(r2.stdout)["entries"] == []
+
+
+def test_record_partial_success_status(tmp_path):
+    reg = tmp_path / "registry.json"
+    r = run_reg(
+        "record", "--hash", "pp1", "--draft-path", "/tmp/pp1.md",
+        "--status", "partial_success",
+        registry_path=reg,
+    )
+    assert r.returncode == 0, r.stderr
+    data = json.loads(reg.read_text())
+    assert data["entries"][0]["status"] == "partial_success"
+
+
+def test_record_with_page_id_and_publish_state(tmp_path):
+    reg = tmp_path / "registry.json"
+    r = run_reg(
+        "record", "--hash", "h", "--draft-path", "/tmp/h.md",
+        "--status", "running",
+        "--page-id", "abcdef1234",
+        "--publish-state", "chunks_appending",
+        registry_path=reg,
+    )
+    assert r.returncode == 0, r.stderr
+    data = json.loads(reg.read_text())
+    assert data["entries"][0]["page_id"] == "abcdef1234"
+    assert data["entries"][0]["publish_state"] == "chunks_appending"
+
+
+def test_update_status_updates_publish_state(tmp_path):
+    reg = tmp_path / "registry.json"
+    run_reg(
+        "record", "--hash", "h", "--draft-path", "/tmp/h.md", "--status", "running",
+        "--page-id", "p1", "--publish-state", "page_created",
+        registry_path=reg,
+    )
+    r = run_reg(
+        "update-status", "--draft-path", "/tmp/h.md",
+        "--status", "partial_success",
+        "--publish-state", "chunks_appending",
+        registry_path=reg,
+    )
+    assert r.returncode == 0, r.stderr
+    data = json.loads(reg.read_text())
+    assert data["entries"][0]["status"] == "partial_success"
+    assert data["entries"][0]["publish_state"] == "chunks_appending"
+
+
+def test_partial_success_ttl_longer_than_success(tmp_path):
+    reg = tmp_path / "registry.json"
+    run_reg(
+        "record", "--hash", "p", "--draft-path", "/tmp/p.md",
+        "--status", "partial_success", registry_path=reg,
+    )
+    data = json.loads(reg.read_text())
+    # partial_success must be retained at least 3 days
+    assert data["entries"][0]["ttl_seconds"] >= 3 * 86400
