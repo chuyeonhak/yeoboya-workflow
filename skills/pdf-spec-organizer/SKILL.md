@@ -560,20 +560,77 @@ python3 "/Users/chuchu/testPlugin/skills/pdf-spec-organizer/scripts/page_publish
 
 ## Update 모드 (`/spec-update`)
 
-기존 Notion 페이지 URL 을 받아 **Phase 4 만** 다시 실행.
+기존 Notion 페이지의 노트를 수정. v2 부터 PDF 페이지 1개 안에 여러 피처가 들어있으므로 **전체 페이지** 또는 **특정 피처 1개 Toggle** 단위 편집이 가능하다.
 
-### U-1. 페이지 조회
+진입 조건:
+- `$NOTION_PAGE_URL` 필수
+- `$FEATURE_NAME` (선택): 지정되면 해당 Toggle 만 편집
 
-`mcp__claude_ai_Notion__notion-fetch` 로 기존 페이지 본문 가져옴.
+### U-1. 페이지 조회 및 초안 생성
 
-### U-2. 임시 초안으로 변환
+```bash
+# 1) 페이지 fetch
+# mcp__claude_ai_Notion__notion-fetch id=$NOTION_PAGE_URL
+# 결과를 ${WORK_DIR}/existing_body.md 로 저장
+# last_edited_time 캡처 → ${WORK_DIR}/T0.txt
 
-본문을 `references/review-format.md` 포맷의 md 로 변환해 `${WORK_DIR}/draft.md` 저장.
+# 2) 페이지 → draft.md 역변환 (features + notes 를 features.json 스키마로 복원)
+# features.json: 각 Toggle 의 feature_id/이름/platform/요구사항/누락 을 복원
+# draft.md: review-format.md 포맷으로 재렌더 (preserved 노트 포함)
+```
 
-### U-3. 노트 작성 (Phase 4 재사용)
+### U-2. feature_name → feature_id 해상
 
-Phase 4 로직 그대로 실행.
+`$FEATURE_NAME` 이 지정된 경우:
 
-### U-4. 병합 퍼블리시
+```bash
+python3 "/Users/chuchu/testPlugin/skills/pdf-spec-organizer/scripts/feature_id.py" resolve \
+  --features-file "${WORK_DIR}/features.json" \
+  --name "$FEATURE_NAME" > "${WORK_DIR}/resolved.json" 2> "${WORK_DIR}/resolve_err.txt"
 
-Phase 5 의 **병합** 경로만 사용. 덮어쓰기/새 버전은 이 모드에서 허용 안 함.
+# 실패 시:
+# - not found → features.json 에서 피처명 목록 출력, 중단
+# - ambiguous → 후보 목록 출력, 사용자에게 feature_id 직접 지정 요청
+```
+
+미지정 시: 전체 페이지 편집 모드.
+
+### U-3. 소프트 락 설치 (optional, best-effort)
+
+```bash
+# 페이지 말미에 <!-- editing_lock: <user@email> <iso8601> --> 블록 append
+# 이미 <5분 이내> 다른 유저 락이 있으면 경고:
+#   ⚠️  <user> 가 <N>분 전부터 편집 중입니다. 계속할까요? (y/n)
+```
+
+### U-4. 에디터 편집
+
+- 전체 모드: `${DRAFT_PATH}` 를 `$EDITOR` 로 열기
+- 부분 모드: 해당 Toggle 블록만 임시 파일로 추출 → `$EDITOR` → 저장 후 원 draft 에 역병합
+
+### U-5. 퍼블리시 전 concurrent-edit 체크
+
+```bash
+# 1) 페이지 refetch, last_edited_time 캡처 → T1
+# 2) T1 > T0 → 3-way merge:
+#    - base 노트: T0 캡처본에서 추출
+#    - fresh 노트: T1 (방금 fetch) 에서 추출
+#    - draft 노트: 사용자 편집본에서 추출
+#    - 각 feature_id × sub-section(ios|android|common) 조합에 대해:
+#      * 양쪽 모두 편집 → 프롬프트 [내 편집 / fresh / 에디터 merge]
+#      * 한쪽만 편집 → 그 편집 채택
+# 3) T1 == T0 → 바로 퍼블리시
+```
+
+### U-6. 병합 퍼블리시
+
+- Phase 5 의 "덮어쓰기(노트 보존)" 경로만 사용. 새 버전은 이 모드에서 허용하지 않음
+- 부분 모드 (`FEATURE_NAME` 지정) 면:
+  - `notion-update-page command=update_content` 로 해당 Toggle 블록만 검색-교체
+  - old_str 은 기존 Toggle 의 `<!-- feature_id: <uuid> -->` 부터 다음 Toggle 의 `<!-- feature_id: ... -->` (또는 페이지 끝) 까지
+- 전체 모드:
+  - 5-4 (덮어쓰기 노트 보존) 와 동일
+
+### U-7. 락 해제
+
+정상 종료 → `editing_lock` 주석 블록 제거. 예외 종료 시 TTL 5분 후 자동 만료 (다음 `/spec-update` 진입 시 판별).
