@@ -230,6 +230,22 @@ python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/draft_registry.
 ```
 /tmp 폴더는 TTL 에 의해 7일 후 자동 삭제.
 
+### 2-5. feature_id 확정
+
+Phase 2 의 모든 분기(split/merge/rename) 가 확정되면 `feature_id.py assign` 으로 UUID 부여:
+
+```bash
+python3 "/Users/chuchu/testPlugin/skills/pdf-spec-organizer/scripts/feature_id.py" assign \
+  --features-file "${WORK_DIR}/features.json"
+```
+
+`feature_id` 는 해당 피처의 라이프타임 동안 변하지 않는다:
+- **rename**: 기존 id 유지
+- **split**: 원본 id 는 남은 피처가 가져감, 분리된 새 피처는 새 id
+- **merge**: 병합된 id 중 하나 채택, 다른 id 는 features.json 의 `merged_into` 필드에 기록 (추후 Relation 생성 시 참조)
+
+Phase 5 퍼블리시 시 각 Toggle 상단에 `<!-- feature_id: <uuid> -->` 주석으로 고정된다.
+
 ## Phase 3 — 누락 체크
 
 **왜:** 기획서가 엣지케이스(에러/빈상태/오프라인 등) 를 빠뜨리는 건 흔함. 표준 체크리스트로 구현 단계 리스크를 사전 감소. 체크 자체는 자동, 해석/대응은 개발자 노트에서.
