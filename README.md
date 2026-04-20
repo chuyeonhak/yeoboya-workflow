@@ -362,3 +362,39 @@ python -m scripts.run_loop \
 **v0.3+ (가능성):**
 - PDF 외 입력 (`/spec-from-notion`, `/spec-from-figma`)
 - 로컬 이미지 → 외부 호스팅 자동 중계
+
+---
+
+## v2 변경사항 (2026-04-20)
+
+### 1 PDF = 1 Notion 페이지
+
+기존: 피처마다 개별 페이지 생성 → DB 가 혼잡.
+v2: PDF 1개 = 페이지 1개. 피처는 Toggle 블록으로 접혀있음. 필요할 때만 펼쳐서 확인.
+
+### 노트 보존
+
+`/spec-from-pdf` 를 같은 PDF 로 다시 실행해도 iOS/Android/공통 노트는 보존된다. `feature_id` 기반 병합으로 피처 rename 후에도 노트 매칭됨.
+
+### 부분 퍼블리시 재개
+
+Phase 5 도중 실패한 경우 `/spec-resume --resume-latest` 로 **중단된 chunk 부터** 이어서 publish. 전체 재실행 불필요.
+
+### `/spec-update` 피처 단위 편집
+
+```
+/spec-update <page-url> --feature="<피처명>"
+```
+해당 Toggle 블록만 열어서 편집 + 병합. 공백/괄호/슬래시(`(A/B)`) 피처명도 안전.
+
+### 마이그레이션
+
+v1 에서 이미 생성된 피처 페이지가 있다면:
+
+1. DB 에 property 추가 (`migrated_to`, `archived`)
+2. `/spec-resume` 또는 새 `/spec-migrate` (해당 workflow) 에서 안내대로 진행
+3. 자세한 내용: `skills/pdf-spec-organizer/SKILL.md` 의 "마이그레이션" 섹션
+
+### 기존 커맨드는 동일
+
+`/spec-from-pdf`, `/spec-update`, `/spec-resume` 슬래시 이름은 유지. 동작만 v2 로 바뀜.
