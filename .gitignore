@@ -5,3 +5,4 @@ __pycache__/
 .pytest_cache/
 /tmp/
 *.DS_Store
+yeoboya-work-flow.config.json

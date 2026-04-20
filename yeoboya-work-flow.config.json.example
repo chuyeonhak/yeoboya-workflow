@@ -1,0 +1,7 @@
+{
+  "pdf_spec_organizer": {
+    "notion_database_id": "<your-feature-db-id>",
+    "notion_data_source_id": "<your-data-source-id>",
+    "parent_page_id": "<your-parent-page-id>"
+  }
+}
