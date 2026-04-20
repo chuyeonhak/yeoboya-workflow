@@ -37,11 +37,14 @@ def _section_re(name: str) -> re.Pattern:
 
 def _is_empty(text: str) -> bool:
     # Consider empty only if it contains the explicit <empty-block/> marker
-    # and nothing else meaningful
+    # and nothing else meaningful (headings are auto-generated scaffolding, not
+    # user content, so "### iOS\n<empty-block/>" is treated as empty).
     if "<empty-block/>" in text:
-        # Remove empty-block tag and check if anything remains
-        stripped = re.sub(r"<empty-block/>", "", text).strip()
-        return stripped == ""
+        # Remove empty-block tag and standalone heading lines, then check if
+        # anything meaningful remains.
+        stripped = re.sub(r"<empty-block/>", "", text)
+        stripped = re.sub(r"^\s*#+\s+.*$", "", stripped, flags=re.MULTILINE)
+        return stripped.strip() == ""
     # If no empty-block tag, it's not considered empty (even if just a header)
     return False
 

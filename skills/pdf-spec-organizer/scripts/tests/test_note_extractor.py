@@ -117,3 +117,26 @@ Trailing stray line.
     out = json.loads(r.stdout)
     feat = out["features"]["aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"]
     assert "Trailing stray line" in feat["stray"]
+
+
+def test_extract_marks_heading_plus_empty_block_as_empty():
+    """A section with only its default heading and empty-block placeholder
+    should be reported as empty so note_merger does not re-inject the heading
+    on round-trip overwrites (regression guard for the v2 note preservation loop)."""
+    content = """
+<!-- feature_id: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa -->
+<!-- notes_android_start -->
+### Android
+<empty-block/>
+<!-- notes_android_end -->
+"""
+    import subprocess, sys, json
+    from pathlib import Path
+    SCRIPTS_DIR = Path(__file__).parent.parent
+    r = subprocess.run(
+        [sys.executable, str(SCRIPTS_DIR / "note_extractor.py")],
+        input=content, capture_output=True, text=True,
+    )
+    out = json.loads(r.stdout)
+    feat = out["features"]["aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"]
+    assert feat["android_empty"] is True
