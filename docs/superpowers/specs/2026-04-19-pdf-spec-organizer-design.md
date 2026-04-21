@@ -1,7 +1,7 @@
-# yeoboya-work-flow 플러그인 — PDF 스펙 정리 기능 설계
+# yeoboya-workflow 플러그인 — PDF 스펙 정리 기능 설계
 
 - 작성일: 2026-04-19
-- 플러그인: `yeoboya-work-flow` (umbrella, 기능 확장 예정)
+- 플러그인: `yeoboya-workflow` (umbrella, 기능 확장 예정)
 - 첫 기능: `pdf-spec-organizer`
 - 상태: Draft (사용자 검토 대기)
 
@@ -33,7 +33,7 @@ iOS/Android 팀이 기획자로부터 복합 PDF(PRD + 디자인 시안 + 유저
 ## 아키텍처 & 파일 구조
 
 ```
-yeoboya-work-flow/
+yeoboya-workflow/
 ├── .claude-plugin/
 │   └── plugin.json              # name, description, version, keywords
 ├── commands/
@@ -56,7 +56,7 @@ yeoboya-work-flow/
 │   └── pdf-spec-organizer/
 │       ├── checklist.yaml       # 누락 체크 항목 (커스터마이즈 가능)
 │       └── notion-schema.yaml   # DB 스키마 정의 (자동 생성 시 사용)
-├── yeoboya-work-flow.config.json  # ★ 프로젝트 레포에 커밋 — 팀 공유 DB ID
+├── yeoboya-workflow.config.json  # ★ 프로젝트 레포에 커밋 — 팀 공유 DB ID
 ├── README.md
 └── CHANGELOG.md
 ```
@@ -67,7 +67,7 @@ yeoboya-work-flow/
 - 커맨드는 얇은 진입점, 실제 로직은 skill
 - Notion 접근은 `mcp__claude_ai_Notion__*` MCP 재사용, 플러그인이 직접 API 안 호출
 - **설정 파일은 `${CLAUDE_PLUGIN_ROOT}/config/pdf-spec-organizer/*.yaml` 을 skill에서 동적 로드**
-- **팀 공유 DB ID 는 프로젝트 레포 루트의 `yeoboya-work-flow.config.json` 에 커밋** (개인별 표류 방지)
+- **팀 공유 DB ID 는 프로젝트 레포 루트의 `yeoboya-workflow.config.json` 에 커밋** (개인별 표류 방지)
 - 사용자별 일시 상태는 `${CLAUDE_PLUGIN_DATA}` (세션 draft 등)
 
 ## 데이터 플로우
@@ -177,7 +177,7 @@ yeoboya-work-flow/
 
 ### 팀 DB 공유 전략
 
-- 프로젝트 레포 루트에 **`yeoboya-work-flow.config.json` 커밋**:
+- 프로젝트 레포 루트에 **`yeoboya-workflow.config.json` 커밋**:
   ```json
   {
     "pdf_spec_organizer": {
@@ -187,7 +187,7 @@ yeoboya-work-flow/
   }
   ```
 - 파일이 없으면 skill 이 "팀 리드가 먼저 셋업하고 커밋하세요" 안내. 개인 임의 셋업 차단.
-- 최초 셋업 명령(팀 리드용): 부모 페이지 URL 입력 → DB 자동 생성 → `yeoboya-work-flow.config.json` 초안 출력(사용자가 커밋).
+- 최초 셋업 명령(팀 리드용): 부모 페이지 URL 입력 → DB 자동 생성 → `yeoboya-workflow.config.json` 초안 출력(사용자가 커밋).
 
 ## `checklist.yaml` 포맷 (v1)
 
@@ -243,7 +243,7 @@ items:
 | Phase 2 대화형 | 사용자 취소 | /tmp 초안 정리, 종료 |
 | Phase 3 체크 | checklist.yaml 없음/파싱 실패 | 기본값 fallback, 경고 |
 | Phase 4 에디터 | 비정상 종료 / 빈 저장 | 노트 없이 진행 확인 |
-| Phase 5 DB 미설정 | 레포에 `yeoboya-work-flow.config.json` 없음 | 팀 리드 셋업 가이드, 중단 |
+| Phase 5 DB 미설정 | 레포에 `yeoboya-workflow.config.json` 없음 | 팀 리드 셋업 가이드, 중단 |
 | Phase 5 Notion 조회 | MCP 실패 / 네트워크 | 재시도 1회 → 실패 시 초안 보존 |
 | Phase 5 이미지 업로드 | Notion 파일 API 실패 | 해당 이미지는 캡션만 남기고 경고 |
 | Phase 5 퍼블리시 중 부분 실패 | 페이지는 만들어졌는데 본문 추가 실패 | `/spec-resume --resume-latest` 로 이어쓰기 가이드 |
@@ -280,7 +280,7 @@ items:
 - [ ] `--fast` 플래그 → 개입 ① ③ 자동 통과, 노트는 강제
 - [ ] `--resume-latest` → 중단 지점부터 이어받기
 - [ ] `/spec-update <notion-url>` → 노트/체크 갱신
-- [ ] `yeoboya-work-flow.config.json` 없을 때 → 셋업 가이드
+- [ ] `yeoboya-workflow.config.json` 없을 때 → 셋업 가이드
 
 ### 자동화
 

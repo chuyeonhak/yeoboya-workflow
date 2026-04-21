@@ -3,7 +3,7 @@
   "owner": { "name": "여보야 팀" },
   "plugins": [
     {
-      "name": "yeoboya-work-flow",
+      "name": "yeoboya-workflow",
       "source": "./",
       "description": "여보야 회사 워크플로우 자동화. PDF 스펙 → Notion 퍼블리시 + 누락 체크 + 플랫폼별 개발자 노트 공유."
     }

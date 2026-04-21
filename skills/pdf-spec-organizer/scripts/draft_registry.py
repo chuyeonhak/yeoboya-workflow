@@ -38,7 +38,7 @@ def default_registry() -> Path:
     plugin_data = os.environ.get("CLAUDE_PLUGIN_DATA")
     if plugin_data:
         return Path(plugin_data) / "draft-registry.json"
-    return Path.home() / ".claude-plugin-data" / "yeoboya-work-flow" / "draft-registry.json"
+    return Path.home() / ".claude-plugin-data" / "yeoboya-workflow" / "draft-registry.json"
 
 
 def load(reg: Path) -> dict:

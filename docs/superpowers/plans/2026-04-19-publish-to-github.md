@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** `yeoboya-work-flow` v0.1.1 을 `chuyeonhak` 계정의 private GitHub 저장소로 배포해, 팀원이 `git clone` 후 Claude Code settings 에 경로 등록해 쓸 수 있게 한다.
+**Goal:** `yeoboya-workflow` v0.1.1 을 `chuyeonhak` 계정의 private GitHub 저장소로 배포해, 팀원이 `git clone` 후 Claude Code settings 에 경로 등록해 쓸 수 있게 한다.
 
 **Architecture:** 4개 파일 변경 (.gitignore / config.example / LICENSE / README) → 1개 준비 커밋 → `gh repo create --private --source=. --push` → 태그 별도 push → GitHub 에서 상태 확인.
 
@@ -16,8 +16,8 @@
 
 | 경로 | 유형 | 이번 플랜에서 |
 |---|---|---|
-| `.gitignore` | 수정 | `yeoboya-work-flow.config.json` 1 줄 추가 |
-| `yeoboya-work-flow.config.json.example` | 신규 | 팀원용 설정 템플릿 |
+| `.gitignore` | 수정 | `yeoboya-workflow.config.json` 1 줄 추가 |
+| `yeoboya-workflow.config.json.example` | 신규 | 팀원용 설정 템플릿 |
 | `LICENSE` | 신규 | Proprietary 노티스 |
 | `README.md` | 수정 | 절대 경로 `/Users/chuchu/...` → 상대 경로 |
 
@@ -40,7 +40,7 @@ git tag
 ```
 
 Expected:
-- `git status` 에 `?? yeoboya-work-flow.config.json` 포함 (민감 파일이 untracked 상태)
+- `git status` 에 `?? yeoboya-workflow.config.json` 포함 (민감 파일이 untracked 상태)
 - `git remote -v` 는 **비어있어야** 함 (아직 원격 없음). 이미 있으면 Task 7 전에 판단 필요
 - `git tag` 에 `v0.1.0` 과 `v0.1.1` 둘 다 존재
 
@@ -100,7 +100,7 @@ Edit 도구 호출:
 - `new_string`:
 ```
 *.DS_Store
-yeoboya-work-flow.config.json
+yeoboya-workflow.config.json
 ```
 
 > **주의:** `old_string` 이 파일 마지막 줄이라 개행 처리에 유의. 실제 파일에는 `*.DS_Store` 뒤에 개행이 있을 수도 없을 수도 있음. Edit 실패 시 Read 로 실제 바이트 확인 후 재시도.
@@ -112,25 +112,25 @@ Run:
 tail -3 /Users/chuchu/testPlugin/.gitignore
 ```
 
-Expected: 마지막 라인이 `yeoboya-work-flow.config.json`.
+Expected: 마지막 라인이 `yeoboya-workflow.config.json`.
 
 Run:
 ```bash
-cd /Users/chuchu/testPlugin && git status --short | grep "yeoboya-work-flow.config.json"
+cd /Users/chuchu/testPlugin && git status --short | grep "yeoboya-workflow.config.json"
 ```
 
 Expected: **출력 없음** (파일이 gitignore 에 매치되어 untracked 목록에서 사라짐).
 
 ---
 
-## Task 3: `yeoboya-work-flow.config.json.example` 생성
+## Task 3: `yeoboya-workflow.config.json.example` 생성
 
 **Files:**
-- Create: `/Users/chuchu/testPlugin/yeoboya-work-flow.config.json.example`
+- Create: `/Users/chuchu/testPlugin/yeoboya-workflow.config.json.example`
 
 - [ ] **Step 1: 파일 작성**
 
-Write 도구로 `/Users/chuchu/testPlugin/yeoboya-work-flow.config.json.example` 을 정확히 아래 내용으로 생성:
+Write 도구로 `/Users/chuchu/testPlugin/yeoboya-workflow.config.json.example` 을 정확히 아래 내용으로 생성:
 
 ```json
 {
@@ -146,7 +146,7 @@ Write 도구로 `/Users/chuchu/testPlugin/yeoboya-work-flow.config.json.example`
 
 Run:
 ```bash
-python3 -c "import json; json.load(open('/Users/chuchu/testPlugin/yeoboya-work-flow.config.json.example')); print('OK')"
+python3 -c "import json; json.load(open('/Users/chuchu/testPlugin/yeoboya-workflow.config.json.example')); print('OK')"
 ```
 Expected: `OK`
 
@@ -210,7 +210,7 @@ Expected: 매치 개수. 이 숫자를 Step 3 검증에 사용.
 - `/Users/chuchu/testPlugin/` 로만 끝나는 참조 → `<플러그인-루트>/`
 - `/Users/chuchu/testPlugin` (끝 슬래시 없음) → `<플러그인-루트>`
 
-> **`<플러그인-루트>` 플레이스홀더 의미:** 팀원이 `git clone` 으로 체크아웃한 실제 로컬 경로 (예: `~/projects/yeoboya-work-flow`). README 서두에 이 표기법을 명시하는 안내 한 줄 추가 권장.
+> **`<플러그인-루트>` 플레이스홀더 의미:** 팀원이 `git clone` 으로 체크아웃한 실제 로컬 경로 (예: `~/projects/yeoboya-workflow`). README 서두에 이 표기법을 명시하는 안내 한 줄 추가 권장.
 
 **Edit 접근:** 가장 자주 등장하는 맥락이 `pip install -r /Users/chuchu/testPlugin/skills/...` 같은 명령 블록임. 각 Edit 호출 시 전체 명령이나 한 줄을 `old_string` 으로 주고 상대화된 버전을 `new_string` 으로 준다.
 
@@ -219,7 +219,7 @@ Expected: 매치 개수. 이 숫자를 Step 3 검증에 사용.
 Edit 호출로 "설치" 섹션 시작 직후에 아래 한 줄 append:
 
 ```markdown
-> **경로 표기 안내:** 이 문서에서 `<플러그인-루트>` 는 `git clone` 으로 받은 이 레포의 로컬 경로 (예: `~/projects/yeoboya-work-flow`) 를 의미합니다.
+> **경로 표기 안내:** 이 문서에서 `<플러그인-루트>` 는 `git clone` 으로 받은 이 레포의 로컬 경로 (예: `~/projects/yeoboya-workflow`) 를 의미합니다.
 ```
 
 정확한 위치는 README 의 실제 구조에 따라 조정. 기본 원칙: 경로 표기 사용 전에 한 번 설명.
@@ -258,16 +258,16 @@ Expected:
  M .gitignore
  M README.md
 ?? LICENSE
-?? yeoboya-work-flow.config.json.example
+?? yeoboya-workflow.config.json.example
 ```
 
-(실제 `yeoboya-work-flow.config.json` 은 `.gitignore` 에 잡혀 나오지 않아야 함)
+(실제 `yeoboya-workflow.config.json` 은 `.gitignore` 에 잡혀 나오지 않아야 함)
 
 - [ ] **Step 2: 커밋**
 
 ```bash
 cd /Users/chuchu/testPlugin && \
-git add .gitignore README.md LICENSE yeoboya-work-flow.config.json.example && \
+git add .gitignore README.md LICENSE yeoboya-workflow.config.json.example && \
 git commit -m "chore: prep for public repo — proprietary license, config example, relative paths"
 ```
 
@@ -280,7 +280,7 @@ Run:
 git log -1 --stat
 ```
 
-Expected: 커밋에 `yeoboya-work-flow.config.json` (example 가 아닌 원본) 이 **포함되지 않음** 확인. example 만 있어야 함.
+Expected: 커밋에 `yeoboya-workflow.config.json` (example 가 아닌 원본) 이 **포함되지 않음** 확인. example 만 있어야 함.
 
 ---
 
@@ -301,12 +301,12 @@ Expected: `Logged in to github.com account chuyeonhak`.
 
 Run:
 ```bash
-gh repo view chuyeonhak/yeoboya-work-flow 2>&1 | head -3
+gh repo view chuyeonhak/yeoboya-workflow 2>&1 | head -3
 ```
 
 Expected (신규 생성 가능한 상태):
 ```
-GraphQL: Could not resolve to a Repository with the name 'chuyeonhak/yeoboya-work-flow'. (repository)
+GraphQL: Could not resolve to a Repository with the name 'chuyeonhak/yeoboya-workflow'. (repository)
 ```
 
 만약 레포가 이미 존재한다면 **중단하고 사용자에게 확인**. 삭제 후 재생성 또는 다른 이름 사용 결정.
@@ -315,7 +315,7 @@ GraphQL: Could not resolve to a Repository with the name 'chuyeonhak/yeoboya-wor
 
 ```bash
 cd /Users/chuchu/testPlugin && \
-gh repo create chuyeonhak/yeoboya-work-flow \
+gh repo create chuyeonhak/yeoboya-workflow \
   --private \
   --source=. \
   --description "여보야 팀 워크플로우 자동화 Claude Code 플러그인 — PDF 스펙 → Notion + 플랫폼별 개발자 노트 공유" \
@@ -323,7 +323,7 @@ gh repo create chuyeonhak/yeoboya-work-flow \
 ```
 
 Expected:
-- `https://github.com/chuyeonhak/yeoboya-work-flow` 생성 확인 메시지
+- `https://github.com/chuyeonhak/yeoboya-workflow` 생성 확인 메시지
 - 현재 `main` 브랜치 + 모든 커밋 push 완료
 
 - [ ] **Step 4: push 결과 확인**
@@ -332,7 +332,7 @@ Run:
 ```bash
 git remote -v
 ```
-Expected: `origin` 이 `https://github.com/chuyeonhak/yeoboya-work-flow.git` 를 가리킴 (fetch + push 두 줄).
+Expected: `origin` 이 `https://github.com/chuyeonhak/yeoboya-workflow.git` 를 가리킴 (fetch + push 두 줄).
 
 Run:
 ```bash
@@ -366,7 +366,7 @@ Expected: `* [new tag]` 두 번.
 
 Run:
 ```bash
-gh release list --repo chuyeonhak/yeoboya-work-flow 2>&1 | head -3
+gh release list --repo chuyeonhak/yeoboya-workflow 2>&1 | head -3
 ```
 
 릴리스는 아직 없지만 태그만 있는 상태. 릴리스 자동 생성은 이 플랜 범위 밖 (추후 필요 시 `gh release create v0.1.1 --notes-file CHANGELOG.md` 로 생성).
@@ -387,35 +387,35 @@ Expected: 두 태그 SHA 출력.
 
 Run:
 ```bash
-gh repo view chuyeonhak/yeoboya-work-flow --json visibility,defaultBranchRef,url
+gh repo view chuyeonhak/yeoboya-workflow --json visibility,defaultBranchRef,url
 ```
 
 Expected:
 - `visibility` == `PRIVATE`
 - `defaultBranchRef.name` == `main`
-- `url` == `https://github.com/chuyeonhak/yeoboya-work-flow`
+- `url` == `https://github.com/chuyeonhak/yeoboya-workflow`
 
 - [ ] **Step 2: 민감 파일 원격 부재 확인**
 
 Run:
 ```bash
-gh api repos/chuyeonhak/yeoboya-work-flow/contents/yeoboya-work-flow.config.json 2>&1 | head -3
+gh api repos/chuyeonhak/yeoboya-workflow/contents/yeoboya-workflow.config.json 2>&1 | head -3
 ```
 
 Expected: `"status":"404"` 또는 `"Not Found"` (파일이 없어야 함).
 
 Run:
 ```bash
-gh api repos/chuyeonhak/yeoboya-work-flow/contents/yeoboya-work-flow.config.json.example 2>&1 | grep -o '"name":"[^"]*"'
+gh api repos/chuyeonhak/yeoboya-workflow/contents/yeoboya-workflow.config.json.example 2>&1 | grep -o '"name":"[^"]*"'
 ```
 
-Expected: `"name":"yeoboya-work-flow.config.json.example"` (example 파일은 존재).
+Expected: `"name":"yeoboya-workflow.config.json.example"` (example 파일은 존재).
 
 - [ ] **Step 3: 절대 경로 원격 스캔**
 
 Run:
 ```bash
-gh api repos/chuyeonhak/yeoboya-work-flow/contents/README.md --jq '.content' | base64 -d | grep -c "/Users/chuchu"
+gh api repos/chuyeonhak/yeoboya-workflow/contents/README.md --jq '.content' | base64 -d | grep -c "/Users/chuchu"
 ```
 
 Expected: `0` (원격 README 에서 홈 경로 0 hit).
@@ -439,11 +439,11 @@ git rev-list --count origin/main
 플랜 완료 후 사용자가 팀원에게 공유할 내용:
 
 ```
-1. GitHub 에서 chuyeonhak/yeoboya-work-flow 에 Collaborator 로 초대받기
-2. git clone git@github.com:chuyeonhak/yeoboya-work-flow.git ~/projects/yeoboya-work-flow
+1. GitHub 에서 chuyeonhak/yeoboya-workflow 에 Collaborator 로 초대받기
+2. git clone git@github.com:chuyeonhak/yeoboya-workflow.git ~/projects/yeoboya-workflow
 3. ~/.claude/settings.json 에 플러그인 경로 등록
 4. pip install -r <플러그인-루트>/skills/pdf-spec-organizer/scripts/requirements.txt
-5. 자신 프로젝트 레포에 yeoboya-work-flow.config.json.example 복사 → yeoboya-work-flow.config.json 으로 rename → DB ID 채우기
+5. 자신 프로젝트 레포에 yeoboya-workflow.config.json.example 복사 → yeoboya-workflow.config.json 으로 rename → DB ID 채우기
 6. Claude Code 재시작 → /spec-from-pdf 로 검증
 ```
 
@@ -468,7 +468,7 @@ ls /tmp/spec-draft-* /tmp/run_loop_output /tmp/skill-refactor-verify-* 2>/dev/nu
 rm -rf /tmp/run_loop_output
 ```
 
-- [ ] **Step 2: 로컬 `yeoboya-work-flow.config.json` 유지 여부 결정**
+- [ ] **Step 2: 로컬 `yeoboya-workflow.config.json` 유지 여부 결정**
 
 이 파일은 드라이런 때 테스트용으로 만든 것. 이제 팀에 배포되면 **실제 팀 Notion DB** 로 이 파일을 실제 사용할지 결정:
 

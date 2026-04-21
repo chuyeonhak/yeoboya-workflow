@@ -6,7 +6,7 @@
 
 - [ ] Python 의존성 설치 완료 (`pip install -r skills/pdf-spec-organizer/scripts/requirements.txt`)
 - [ ] Tesseract 설치 완료 (`brew install tesseract tesseract-lang`)
-- [ ] `yeoboya-work-flow.config.json` 프로젝트 레포 루트에 존재
+- [ ] `yeoboya-workflow.config.json` 프로젝트 레포 루트에 존재
 - [ ] Claude Code 에 Notion MCP 연결됨
 
 ## 정상 플로우
@@ -51,7 +51,7 @@
 - [ ] 존재하지 않는 경로 → 구체 에러 메시지
 - [ ] 암호화 PDF → 중단 + 힌트
 - [ ] PII 패턴 포함 PDF → 경고 후 사용자 확인
-- [ ] `yeoboya-work-flow.config.json` 없음 → 셋업 가이드 + 중단
+- [ ] `yeoboya-workflow.config.json` 없음 → 셋업 가이드 + 중단
 - [ ] Notion MCP 실패 → 재시도 1회 후 초안 보존 + `/spec-resume` 가이드
 
 ## Resume

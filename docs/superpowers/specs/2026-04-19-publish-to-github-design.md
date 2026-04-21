@@ -1,13 +1,13 @@
 # GitHub Private Repo 배포 설계
 
 - 작성일: 2026-04-19
-- 대상: `yeoboya-work-flow` v0.1.1
-- 저장소: `https://github.com/chuyeonhak/yeoboya-work-flow` (Private)
+- 대상: `yeoboya-workflow` v0.1.1
+- 저장소: `https://github.com/chuyeonhak/yeoboya-workflow` (Private)
 - 상태: Draft (사용자 검토 대기)
 
 ## 배경
 
-`yeoboya-work-flow` v0.1.1 이 로컬 git 저장소에 안정적으로 릴리스됨. 팀원들이 이 플러그인을 사용하려면 원격 저장소에서 git clone 후 Claude Code settings 에 경로 등록해야 함. 외부 공개 전 민감 정보 정리 + 템플릿 파일 추가가 필요.
+`yeoboya-workflow` v0.1.1 이 로컬 git 저장소에 안정적으로 릴리스됨. 팀원들이 이 플러그인을 사용하려면 원격 저장소에서 git clone 후 Claude Code settings 에 경로 등록해야 함. 외부 공개 전 민감 정보 정리 + 템플릿 파일 추가가 필요.
 
 ## 목표
 
@@ -30,8 +30,8 @@
 
 | 경로 | 유형 | 설명 |
 |---|---|---|
-| `.gitignore` | 수정 | `yeoboya-work-flow.config.json` 한 줄 추가 |
-| `yeoboya-work-flow.config.json.example` | 신규 | 팀원이 복사해 쓰는 템플릿 |
+| `.gitignore` | 수정 | `yeoboya-workflow.config.json` 한 줄 추가 |
+| `yeoboya-workflow.config.json.example` | 신규 | 팀원이 복사해 쓰는 템플릿 |
 | `LICENSE` | 신규 | Proprietary 노티스 (여보야 팀 내부 전용) |
 | `README.md` | 수정 | 절대 경로 `/Users/chuchu/...` → 상대 경로 |
 
@@ -40,12 +40,12 @@
 ### `.gitignore` 추가
 
 ```
-yeoboya-work-flow.config.json
+yeoboya-workflow.config.json
 ```
 
-로컬 드라이런 중 생성된 실제 Notion DB ID 가 들어있는 `yeoboya-work-flow.config.json` 이 실수로 커밋되지 않도록 명시.
+로컬 드라이런 중 생성된 실제 Notion DB ID 가 들어있는 `yeoboya-workflow.config.json` 이 실수로 커밋되지 않도록 명시.
 
-### `yeoboya-work-flow.config.json.example` (신규)
+### `yeoboya-workflow.config.json.example` (신규)
 
 ```json
 {
@@ -57,7 +57,7 @@ yeoboya-work-flow.config.json
 }
 ```
 
-팀원은 이 파일을 **자신이 사용하는 프로젝트 레포 루트** 에 `yeoboya-work-flow.config.json` 로 복사한 뒤 각 필드를 자기 Notion DB 값으로 채움.
+팀원은 이 파일을 **자신이 사용하는 프로젝트 레포 루트** 에 `yeoboya-workflow.config.json` 로 복사한 뒤 각 필드를 자기 Notion DB 값으로 채움.
 
 ### `LICENSE` (신규)
 
@@ -84,18 +84,18 @@ All rights reserved.
 ```
 1. 위 4개 파일 변경 (.gitignore 수정, example/LICENSE 신규, README 수정)
 2. 커밋: "chore: prep for public repo — proprietary license, config example, relative paths"
-3. gh repo create chuyeonhak/yeoboya-work-flow --private --source=. --push
+3. gh repo create chuyeonhak/yeoboya-workflow --private --source=. --push
    → 현재 main 브랜치 + 모든 커밋 히스토리 push
 4. git push origin v0.1.0 v0.1.1
    → 태그 별도 push
-5. gh repo view chuyeonhak/yeoboya-work-flow 로 확인
+5. gh repo view chuyeonhak/yeoboya-workflow 로 확인
 ```
 
 ## 검증 기준
 
-- `gh repo view chuyeonhak/yeoboya-work-flow` 이 **private** 저장소 정상 표시
+- `gh repo view chuyeonhak/yeoboya-workflow` 이 **private** 저장소 정상 표시
 - `git log --oneline` 이 원격과 동기화됨 (약 32 커밋 + 2 태그)
-- `yeoboya-work-flow.config.json` 은 원격에 **존재하지 않음** (gitignored)
+- `yeoboya-workflow.config.json` 은 원격에 **존재하지 않음** (gitignored)
 - `config.json.example` 은 원격에 존재
 - 원격 README 렌더링에서 절대 경로 `/Users/chuchu/...` 검색 시 **0 hit**
 - 팀원이 빈 디렉토리에서 `git clone` → 명령어 실행 가능한 상태
@@ -103,5 +103,5 @@ All rights reserved.
 ## 오픈 이슈
 
 - 팀원 읽기/쓰기 권한 관리: 초기엔 개인 계정으로 push → 팀 콜라보레이터 초대로 접근 부여 (사용자 판단)
-- 장기적으로 조직 계정 (예: `yeoboya/yeoboya-work-flow`) 로 이관 가능성 — 이번 플랜 범위 밖
+- 장기적으로 조직 계정 (예: `yeoboya/yeoboya-workflow`) 로 이관 가능성 — 이번 플랜 범위 밖
 - CI/CD (pytest 자동 실행) — v0.2 이후 고려

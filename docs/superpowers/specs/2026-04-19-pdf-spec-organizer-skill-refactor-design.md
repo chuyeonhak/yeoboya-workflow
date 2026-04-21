@@ -30,7 +30,7 @@
 ## 변경 대상 파일
 
 ```
-yeoboya-work-flow/
+yeoboya-workflow/
 ├── skills/pdf-spec-organizer/
 │   ├── SKILL.md                         # 수정 (description, Phase 5 축약, Why 주석)
 │   └── references/

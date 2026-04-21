@@ -23,11 +23,11 @@ allowed-tools: Bash Read Write Edit Grep Glob mcp__claude_ai_Notion__notion-sear
 
 **왜:** 팀원들이 각자 다른 Notion DB 에 피처를 만들면 iOS/Android 가 서로 못 봄. 레포에 커밋된 설정이 "팀의 단일 DB" 를 보장.
 
-- **현재 워크스페이스 레포 루트**에서 `yeoboya-work-flow.config.json` 을 찾는다.
+- **현재 워크스페이스 레포 루트**에서 `yeoboya-workflow.config.json` 을 찾는다.
 - 없으면 다음 메시지로 중단:
 
   ```
-  ❌ 팀 공유 설정 파일이 없습니다: yeoboya-work-flow.config.json
+  ❌ 팀 공유 설정 파일이 없습니다: yeoboya-workflow.config.json
 
   팀 리드가 먼저 최초 셋업을 실행하고 이 파일을 레포에 커밋해야 합니다.
   최초 셋업은 별도 문서 참고: README.md 의 "팀 리드 최초 셋업" 섹션.

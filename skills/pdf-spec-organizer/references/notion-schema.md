@@ -58,7 +58,7 @@
 
 ## 팀 DB 공유 전략
 
-`yeoboya-work-flow.config.json` 을 프로젝트 레포 루트에 커밋:
+`yeoboya-workflow.config.json` 을 프로젝트 레포 루트에 커밋:
 
 ```json
 {

@@ -154,7 +154,7 @@ Notion 에 같은 피처가 이미 존재합니다:
 
 ### 2차 계획 (v0.2)
 
-S3 또는 imgur 등 외부 호스팅 중계 업로더 추가. 로컬 경로를 외부 URL 로 변환 후 Notion 에 제출. `yeoboya-work-flow.config.json` 에 `image_upload_bucket` 같은 필드 추가 예정.
+S3 또는 imgur 등 외부 호스팅 중계 업로더 추가. 로컬 경로를 외부 URL 로 변환 후 Notion 에 제출. `yeoboya-workflow.config.json` 에 `image_upload_bucket` 같은 필드 추가 예정.
 
 ### 사용자 통지
 
@@ -383,7 +383,7 @@ Edit Old:
 ```
 ### 2. 팀 공유 설정 확인
 
-- **현재 워크스페이스 레포 루트**에서 `yeoboya-work-flow.config.json` 을 찾는다.
+- **현재 워크스페이스 레포 루트**에서 `yeoboya-workflow.config.json` 을 찾는다.
 ```
 
 Edit New:
@@ -392,7 +392,7 @@ Edit New:
 
 **왜:** 팀원들이 각자 다른 Notion DB 에 피처를 만들면 iOS/Android 가 서로 못 봄. 레포에 커밋된 설정이 "팀의 단일 DB" 를 보장.
 
-- **현재 워크스페이스 레포 루트**에서 `yeoboya-work-flow.config.json` 을 찾는다.
+- **현재 워크스페이스 레포 루트**에서 `yeoboya-workflow.config.json` 을 찾는다.
 ```
 
 - [ ] **Step 4: Precondition 3 에 Why 추가**
