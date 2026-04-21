@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.4.0] - 2026-04-21
+
+### Added
+- Phase 3.5 **피처 메타 정보 생성 단계** — `project_context_path` 가 설정되면 Phase 3 직후 각 피처에 `예상 기간 / 타팀 의존성 / 기획 누락 / 타팀 요청사항` 메타를 자동 제안. 개발자는 Phase 4 에서 검토/수정.
+- 코드베이스 탐색에 Claude Code `Explore` subagent 사용 (`superpowers:dispatching-parallel-agents` 원칙으로 피처 3+ 는 병렬 dispatch). 토큰 한도 접근 시 `thoroughness` 를 자동 `quick` 강등.
+- `scripts/enrich_features.py` — `load-context` (500줄 절삭) + `merge-metadata` (features.json 병합, JSON 파싱 실패 시 빈 구조 fallback).
+- `references/project-context-template.md` — 팀이 복사해서 쓸 템플릿.
+- `<!-- meta_start|end -->` 블록이 Phase 4 초안 md 와 Notion Toggle 본문에 포함됨.
+
+### Changed
+- `note_extractor.py` / `note_merger.py` 가 `<!-- meta_start|end -->` 블록도 노트 섹션과 동등하게 추출/병합.
+- `features.json` 스키마: 각 피처에 `metadata` 객체(`estimated_effort` / `external_dependencies` / `planning_gaps` / `cross_team_requests`) 추가.
+- `yeoboya-workflow.config.json.example` 에 `project_context_path` + `codebase_roots` 예시.
+- Phase 4 미리보기 요약에 "메타 ✓/✗" 컬럼 추가.
+- Phase 5 성공 로그에 메타 생성 카운트 + 웹 필터 제외 카운트 표시.
+
+### Compatibility
+- v0.3 이하 draft 를 `/spec-resume` 로 재개하면 `metadata` 필드가 없다 → 빈 구조로 fallback, Phase 3.5 재실행 없음 (경고 출력).
+- `project_context_path` 미설정 시 Phase 3.5 전체 스킵 (기존 v0.3 동작 그대로).
+- 기존 pytest 회귀 없음 (총 59 tests pass; 신규 10 / 기존 49).
+
 ## [0.3.0] - 2026-04-21
 
 ### Added

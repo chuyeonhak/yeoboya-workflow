@@ -127,6 +127,33 @@ iOS/Android 개발자가 기획자에게 PDF 스펙 받으면:
 
 ---
 
+## 프로젝트 컨텍스트 셋업 (v0.4+, 선택)
+
+Phase 3.5 "피처 메타 정보 생성" 을 활성화하려면 팀이 1회 `project-context.md` 를 작성해서 레포에 커밋한다.
+
+1. 템플릿 복사:
+   ```bash
+   cp skills/pdf-spec-organizer/references/project-context-template.md docs/project-context.md
+   ```
+2. 팀 구성 / 과거 개발 기간 사례 / 타팀 채널 / 제약 조건 채우기. 자유 마크다운, 500 줄까지 사용됨.
+3. `yeoboya-workflow.config.json` 에 경로 선언:
+   ```json
+   {
+     "pdf_spec_organizer": {
+       "project_context_path": "./docs/project-context.md",
+       "codebase_roots": {
+         "ios": "~/repos/myapp-ios",
+         "android": "~/repos/myapp-android"
+       }
+     }
+   }
+   ```
+4. `codebase_roots` 는 **선택**. 있으면 Claude 가 `Explore` subagent 로 레포를 자연어 탐색해 기간 추정 신뢰도를 높인다. 없으면 project-context 만으로 메타를 제안.
+
+설정이 없으면 Phase 3.5 는 스킵되며 v0.3 과 동일하게 동작한다.
+
+---
+
 ## 커맨드 레퍼런스
 
 ### `/spec-from-pdf <path> [--fast]`
