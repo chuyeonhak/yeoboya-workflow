@@ -385,12 +385,14 @@ print(json.dumps({'items': items, 'source': source}))
 
 Run:
 ```bash
-CONFIG_PATH="${WORK_DIR}/../yeoboya-workflow.config.json"  # Precondition 2 에서 찾은 경로
+# Precondition 2 에서 찾은 레포 루트의 config 경로를 사용
+REPO_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+CONFIG_PATH="${REPO_ROOT}/yeoboya-workflow.config.json"
 CTX_REL=$(python3 -c "
 import json, sys
-cfg = json.load(open('${CONFIG_PATH}'))
+cfg = json.load(open(sys.argv[1]))
 print(cfg.get('pdf_spec_organizer', {}).get('project_context_path', ''))
-")
+" "$CONFIG_PATH")
 ```
 
 `CTX_REL` 이 비어 있으면 아래 경고를 출력하고 **Phase 4 로 곧장 진입**:
@@ -402,12 +404,34 @@ print(cfg.get('pdf_spec_organizer', {}).get('project_context_path', ''))
 비어 있지 않으면 절대경로로 정규화 후 `enrich_features.py load-context` 로 로드:
 
 ```bash
-CTX_ABS=$(python3 -c "import os,sys; print(os.path.realpath(os.path.expanduser(sys.argv[1])))" "$CTX_REL")
+CTX_ABS=$(python3 -c "
+import os, sys
+base = os.path.dirname(os.path.realpath(sys.argv[1]))
+raw = os.path.expanduser(sys.argv[2])
+if os.path.isabs(raw):
+    print(os.path.realpath(raw))
+else:
+    print(os.path.realpath(os.path.join(base, raw)))
+" "$CONFIG_PATH" "$CTX_REL")
 python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/enrich_features.py" \
   load-context --path "$CTX_ABS" > "${WORK_DIR}/context.json"
 ```
 
-결과 `context.json` 의 `skip: true` 이면 위와 동일한 경고 후 Phase 4 진입. `truncated: true` 이면 경고:
+결과 `context.json` 의 `skip: true` 이면 `reason` 별로 구분해 경고 후 Phase 4 진입:
+
+- `reason: "not_found"` →
+  ```
+  ℹ️  project_context_path 가 가리키는 파일이 없어 메타 생성 스킵: <path>
+    설정 가이드: README.md "프로젝트 컨텍스트 셋업"
+  ```
+- `reason: "empty"` →
+  ```
+  ℹ️  project-context.md 가 비어 있어 메타 생성 스킵: <path>
+    템플릿 참고: skills/pdf-spec-organizer/references/project-context-template.md
+  ```
+- 기타 `skip: true` → "미사용 (설정 없음/파일 없음/비어 있음)" 일반 메시지 후 계속.
+
+`truncated: true` 이면 경고:
 ```
 ⚠️  project-context.md 가 <total_line_count> 줄입니다. 앞 500 줄만 사용합니다.
 ```
@@ -420,12 +444,22 @@ python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/enrich_features
 
 ### 3.5-b. 코드베이스 탐색 (Explore subagent)
 
-`codebase_roots` 각 플랫폼 경로가 존재하면, 해당 플랫폼에 속한 `excluded == false` 피처마다 **Claude Code `Explore` subagent** 를 spawn 한다.
+`codebase_roots` 각 플랫폼 경로를 먼저 검증한다:
+- 경로가 설정되고 실제 존재 → 해당 플랫폼 탐색 활성
+- 경로가 설정되었으나 존재하지 않음 → 해당 플랫폼 최초 1회 경고 후 탐색 스킵:
+  ```
+  ⚠️  codebase_roots.<platform> 경로가 존재하지 않음: <path>. <platform> 탐색 스킵.
+  ```
+- 경로 미설정 → 이미 3.5-a 에서 안내됨 (조용히 스킵)
+
+활성화된 플랫폼에 한해, 해당 플랫폼에 속한 `excluded == false` 피처마다 **Claude Code `Explore` subagent** 를 spawn 한다.
 
 병렬화 규칙 (`superpowers:dispatching-parallel-agents` 원칙):
-- 대상 피처 수 < 3 → 순차 호출 (Agent 툴 호출을 연속으로)
-- 대상 피처 수 ≥ 3 → 플랫폼별로 묶어 **단일 메시지에 여러 Agent 호출** (병렬 dispatch)
-- 공통 피처 (`platform` 에 iOS 와 Android 모두 포함) → iOS/Android 양쪽 각각 Explore 1회씩
+- 공통 피처 판정: `platform` 에 `"공통"` 이 포함되거나 `iOS` 와 `Android` 가 모두 포함되어 있으면 "공통 피처" 로 취급. 공통 피처는 iOS/Android 양쪽 각각 Explore 1회씩 호출 (호출 건수 2).
+- 호출 건수 기준 (피처 수 아님): 모든 Explore 호출을 합산.
+  - 합계 < 3 → 순차 호출 (Agent 툴 호출을 연속으로)
+  - 합계 ≥ 3 → 플랫폼별로 묶어 **단일 메시지에 여러 Agent 호출** (병렬 dispatch)
+- iOS-only / Android-only 피처는 해당 플랫폼만 1회 호출.
 
 각 Explore 호출 파라미터:
 - `subagent_type`: `"Explore"`
