@@ -112,3 +112,75 @@ body
     merged = draft.read_text()
     assert "<!-- stray: preserved -->" in merged
     assert "manual user addition" in merged
+
+
+def test_merge_injects_preserved_meta_section(tmp_path):
+    draft = tmp_path / "draft.md"
+    draft.write_text("""
+### 1. Foo
+<!-- feature_id: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa -->
+body
+
+<!-- meta_start -->
+<empty-block/>
+<!-- meta_end -->
+
+<!-- notes_ios_start -->
+<empty-block/>
+<!-- notes_ios_end -->
+
+<!-- notes_android_start -->
+<empty-block/>
+<!-- notes_android_end -->
+
+<!-- notes_common_start -->
+<empty-block/>
+<!-- notes_common_end -->
+""")
+    notes = tmp_path / "notes.json"
+    notes.write_text(json.dumps({
+        "features": {
+            "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa": {
+                "ios": "", "ios_empty": True,
+                "android": "", "android_empty": True,
+                "common": "", "common_empty": True,
+                "stray": "",
+                "meta": "**예상 기간:** iOS 2일", "meta_empty": False,
+            }
+        }
+    }))
+    r = run_merge(draft, notes)
+    assert r.returncode == 0, r.stderr
+    merged = draft.read_text()
+    assert "**예상 기간:** iOS 2일" in merged
+
+
+def test_merge_leaves_empty_meta_as_placeholder(tmp_path):
+    draft = tmp_path / "draft.md"
+    draft.write_text("""
+### 1. Foo
+<!-- feature_id: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa -->
+body
+
+<!-- meta_start -->
+<empty-block/>
+<!-- meta_end -->
+""")
+    notes = tmp_path / "notes.json"
+    notes.write_text(json.dumps({
+        "features": {
+            "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa": {
+                "ios": "", "ios_empty": True,
+                "android": "", "android_empty": True,
+                "common": "", "common_empty": True,
+                "stray": "",
+                "meta": "", "meta_empty": True,
+            }
+        }
+    }))
+    r = run_merge(draft, notes)
+    merged = draft.read_text()
+    # meta block remains as empty-block placeholder
+    assert "<!-- meta_start -->" in merged
+    assert "<!-- meta_end -->" in merged
+    assert "<empty-block/>" in merged

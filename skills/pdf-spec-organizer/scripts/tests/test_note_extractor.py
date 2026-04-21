@@ -140,3 +140,36 @@ def test_extract_marks_heading_plus_empty_block_as_empty():
     out = json.loads(r.stdout)
     feat = out["features"]["aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"]
     assert feat["android_empty"] is True
+
+
+def test_extract_captures_meta_block():
+    content = """
+<!-- feature_id: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa -->
+<!-- meta_start -->
+#### 📊 개발 계획 메타
+**예상 기간:** iOS 2일
+<!-- meta_end -->
+
+<!-- notes_ios_start -->
+ios stuff
+<!-- notes_ios_end -->
+"""
+    r = run_ext(content)
+    out = json.loads(r.stdout)
+    feat = out["features"]["aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"]
+    assert "예상 기간" in feat["meta"]
+    assert feat["meta_empty"] is False
+
+
+def test_extract_flags_empty_meta_block():
+    content = """
+<!-- feature_id: aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa -->
+<!-- meta_start -->
+<empty-block/>
+<!-- meta_end -->
+"""
+    r = run_ext(content)
+    out = json.loads(r.stdout)
+    feat = out["features"]["aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"]
+    assert feat["meta_empty"] is True
+    assert feat["meta"].strip() == ""

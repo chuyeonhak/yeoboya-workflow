@@ -26,6 +26,10 @@ FEATURE_ID_RE = re.compile(
 SENTINEL_RE = re.compile(r"<!--\s*publish_sentinel:[^>]*-->")
 
 SECTION_NAMES = ("ios", "android", "common")
+META_RE = re.compile(
+    r"<!--\s*meta_start\s*-->(.*?)<!--\s*meta_end\s*-->",
+    re.DOTALL,
+)
 
 
 def _section_re(name: str) -> re.Pattern:
@@ -53,6 +57,7 @@ def _strip_known_blocks(segment: str) -> str:
     out = segment
     for name in SECTION_NAMES:
         out = _section_re(name).sub("", out)
+    out = META_RE.sub("", out)
     out = SENTINEL_RE.sub("", out)
     out = FEATURE_ID_RE.sub("", out)
     return out.strip()
@@ -78,7 +83,20 @@ def extract(text: str) -> dict:
                 content = re.sub(r"<empty-block/>", "", content).strip()
             feat[name] = content
             feat[f"{name}_empty"] = is_empty
-        # stray = everything except feature_id marker, note sections, sentinels, and the first line after feature_id
+        # meta: the <!-- meta_start|end --> block. Empty if absent OR only
+        # contains the <empty-block/> placeholder.
+        m = META_RE.search(segment)
+        if m:
+            meta_inner = m.group(1).strip()
+            meta_empty = _is_empty(meta_inner)
+            if meta_empty:
+                meta_inner = re.sub(r"<empty-block/>", "", meta_inner).strip()
+            feat["meta"] = meta_inner
+            feat["meta_empty"] = meta_empty
+        else:
+            feat["meta"] = ""
+            feat["meta_empty"] = True
+        # stray = everything except feature_id marker, note sections, meta, sentinels
         stray = _strip_known_blocks(segment)
         feat["stray"] = stray
         result["features"][fid] = feat

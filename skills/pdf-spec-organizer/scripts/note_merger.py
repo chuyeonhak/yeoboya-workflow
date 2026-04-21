@@ -19,6 +19,11 @@ from pathlib import Path
 
 SECTION_NAMES = ("ios", "android", "common")
 
+META_PAT = re.compile(
+    r"(<!--\s*meta_start\s*-->)(.*?)(<!--\s*meta_end\s*-->)",
+    re.DOTALL,
+)
+
 
 def _replace_section(segment: str, name: str, new_inner: str) -> str:
     pat = re.compile(
@@ -27,6 +32,11 @@ def _replace_section(segment: str, name: str, new_inner: str) -> str:
     )
     replacement = f"\\1\n{new_inner}\n\\3" if new_inner.strip() else "\\1\n<empty-block/>\n\\3"
     return pat.sub(replacement, segment, count=1)
+
+
+def _replace_meta(segment: str, new_inner: str) -> str:
+    replacement = f"\\1\n{new_inner}\n\\3" if new_inner.strip() else "\\1\n<empty-block/>\n\\3"
+    return META_PAT.sub(replacement, segment, count=1)
 
 
 def _find_feature_positions(text: str):
@@ -47,6 +57,8 @@ def merge(draft: str, notes: dict) -> str:
         feat_segment = draft[start:next_start]
         n = notes.get("features", {}).get(fid)
         if n:
+            if not n.get("meta_empty", True):
+                feat_segment = _replace_meta(feat_segment, n.get("meta", ""))
             for name in SECTION_NAMES:
                 if not n.get(f"{name}_empty", True):
                     feat_segment = _replace_section(feat_segment, name, n[name])
@@ -67,6 +79,8 @@ def merge(draft: str, notes: dict) -> str:
         for fid in orphan_ids:
             feat = notes["features"][fid]
             merged += f"\n### feature_id: {fid}\n"
+            if not feat.get("meta_empty", True) and feat.get("meta", "").strip():
+                merged += f"\n**meta:**\n{feat['meta'].strip()}\n"
             for name in SECTION_NAMES:
                 if not feat.get(f"{name}_empty", True):
                     merged += f"\n**{name}:**\n{feat[name].strip()}\n"
