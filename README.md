@@ -131,15 +131,18 @@ iOS/Android 개발자가 기획자에게 PDF 스펙 받으면:
 
 Phase 3.5 "피처 메타 정보 생성" 을 활성화하려면 팀이 1회 `project-context.md` 를 작성해서 레포에 커밋한다.
 
-1. 템플릿 복사:
+1. 템플릿 복사 (`docs/` 가 없으면 먼저 생성):
    ```bash
-   cp skills/pdf-spec-organizer/references/project-context-template.md docs/project-context.md
+   mkdir -p docs && cp skills/pdf-spec-organizer/references/project-context-template.md docs/project-context.md
    ```
-2. 팀 구성 / 과거 개발 기간 사례 / 타팀 채널 / 제약 조건 채우기. 자유 마크다운, 500 줄까지 사용됨.
-3. `yeoboya-workflow.config.json` 에 경로 선언:
+2. 팀 구성 / 과거 개발 기간 사례 / 타팀 채널 / 제약 조건 채우기. 자유 마크다운. 파일이 500 줄을 넘으면 앞 500 줄만 사용하고 경고가 출력됨.
+3. `yeoboya-workflow.config.json` 의 기존 `pdf_spec_organizer` 객체에 아래 두 키(`project_context_path`, `codebase_roots`)를 **추가**한다. 기존 Notion 키는 유지:
    ```json
    {
      "pdf_spec_organizer": {
+       "notion_database_id": "<your-feature-db-id>",
+       "notion_data_source_id": "<your-data-source-id>",
+       "parent_page_id": "<your-parent-page-id>",
        "project_context_path": "./docs/project-context.md",
        "codebase_roots": {
          "ios": "~/repos/myapp-ios",

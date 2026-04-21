@@ -398,7 +398,7 @@ print(cfg.get('pdf_spec_organizer', {}).get('project_context_path', ''))
 `CTX_REL` 이 비어 있으면 아래 경고를 출력하고 **Phase 4 로 곧장 진입**:
 ```
 ℹ️  project_context_path 가 설정되지 않아 피처 메타 정보 생성 스킵.
-  설정 가이드: README.md "프로젝트 컨텍스트 셋업"
+  설정 가이드: README.md "프로젝트 컨텍스트 셋업 (v0.4+, 선택)"
 ```
 
 비어 있지 않으면 절대경로로 정규화 후 `enrich_features.py load-context` 로 로드:
@@ -422,7 +422,7 @@ python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/enrich_features
 - `reason: "not_found"` →
   ```
   ℹ️  project_context_path 가 가리키는 파일이 없어 메타 생성 스킵: <path>
-    설정 가이드: README.md "프로젝트 컨텍스트 셋업"
+    설정 가이드: README.md "프로젝트 컨텍스트 셋업 (v0.4+, 선택)"
   ```
 - `reason: "empty"` →
   ```
