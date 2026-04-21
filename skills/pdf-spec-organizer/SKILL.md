@@ -604,9 +604,10 @@ python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/feature_id.py" 
 - `<!-- plugin-state -->` 헤더에 `phase: 4`, `pdf_hash`, `source_file`, `created_at`, `publish_state: idle`, `page_id:` (빈 값), `last_block_sentinel_id:` (빈 값) 포함
 - 각 피처는 Toggle heading (`### N. <name> {toggle="true"}`) 로 렌더
 - 각 Toggle 첫 줄 아래에 `<!-- feature_id: <uuid> -->` 주석 삽입
+- **메타 섹션(`<!-- meta_start|end -->`):** Phase 3.5 가 실행됐으면 `features.json[feature].metadata` 를 `references/review-format.md` 의 "메타 섹션 포맷" 규칙대로 렌더. Phase 3.5 스킵 케이스(project_context_path 미설정 등) 에선 `<!-- meta_start -->\n<empty-block/>\n<!-- meta_end -->` 로 빈 상태 렌더 (Update 모드 호환)
 - iOS / Android / 공통 노트 섹션은 `<!-- notes_*_start/end -->` 마커로 감싸고 **빈 상태** (`<empty-block/>`) 로 렌더
 - 각 Toggle 끝에 `<!-- publish_sentinel: feature_<short-id>_done -->` 삽입
-- `--fast` 플래그여도 이 Phase 는 생략되지 않음
+- `--fast` 플래그여도 이 Phase 는 생략되지 않음 (메타 섹션은 Claude 제안값 그대로, 노트 섹션은 빈 상태)
 
 ### 4-3. 사용자에게 노트 작성 프롬프트
 
@@ -642,10 +643,13 @@ python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/feature_id.py" 
 미리보기:
 
   PDF: <filename>
-  피처 7개, 누락 항목 35개, 노트:
-    - 앱 시작 플로우 개방: iOS ✓, Android ✗, 공통 ✗
-    - 메인화면 비로그인 UI 제어: iOS ✓, Android ✓, 공통 ✗
+  피처 7개, 누락 항목 35개, 상태:
+    - 앱 시작 플로우 개방: 메타 ✓, iOS ✓, Android ✗, 공통 ✗
+    - 메인화면 비로그인 UI 제어: 메타 ✓, iOS ✓, Android ✓, 공통 ✗
     ...
+
+  (메타 ✓/✗ 는 `<!-- meta_start|end -->` 블록이 비어있지 않은지 여부.
+   Phase 3.5 가 스킵됐거나 빈 메타로 fallback 된 피처는 ✗ 로 표시.)
 
   Notion 에 퍼블리시할까요?
     y) 퍼블리시
@@ -772,9 +776,13 @@ python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/draft_registry.
 ```
 ✓ 퍼블리시 완료:
   <PDF 제목>: https://notion.so/...
+  피처 <N>개 게시 (메타 생성 <M>개, 웹 필터 제외 <W>개)
 
 초안은 3일 후 자동 삭제됩니다: <draft_path>
 ```
+
+`<M>` = `features.json` 중 `metadata.estimated_effort` 가 비어있지 않은 피처 수.
+`<W>` = `excluded == true and excluded_reason == "web"` 피처 수.
 
 GC 트리거:
 ```bash
@@ -827,6 +835,15 @@ excluded_ids:
 ```
 
 excluded_ids 가 비어 있거나 키가 없으면 (v0.2 이전 초안) 무시하고 진행. 하위 호환 유지.
+
+**메타 fallback (v0.3 이전 초안):** features.json 의 어떤 피처든 `metadata` 필드가 없으면 아래 빈 구조를 삽입 후 계속:
+```json
+{"estimated_effort": "", "external_dependencies": [], "planning_gaps": [], "cross_team_requests": []}
+```
+Resume 는 Phase 3.5 를 **다시 실행하지 않음** — 이미 진행 중인 draft 를 존중. 메타가 필요한 경우 새 `/spec-from-pdf` 실행으로 fresh 초안 생성 필요. 다음 경고 한 줄 출력:
+```
+ℹ️  v0.3 이하 초안 — 메타 정보 없이 재개합니다. Phase 3.5 재실행이 필요하면 /spec-from-pdf 로 새 실행하세요.
+```
 
 ### R-3. 페이지 재검증 및 sentinel 재개
 
@@ -882,9 +899,11 @@ python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/page_publisher.
 # 결과를 ${WORK_DIR}/existing_body.md 로 저장
 # last_edited_time 캡처 → ${WORK_DIR}/T0.txt
 
-# 2) 페이지 → draft.md 역변환 (features + notes 를 features.json 스키마로 복원)
-# features.json: 각 Toggle 의 feature_id/이름/platform/요구사항/누락 을 복원
-# draft.md: review-format.md 포맷으로 재렌더 (preserved 노트 포함)
+# 2) 페이지 → draft.md 역변환 (features + notes + meta 를 features.json 스키마로 복원)
+# features.json: 각 Toggle 의 feature_id/이름/platform/요구사항/누락/metadata 복원
+#   - metadata 가 Notion 본문의 meta 섹션에 없으면 빈 구조로 초기화
+#   - Update 모드는 Phase 3.5 를 재실행하지 않음 (기존 메타 보존 + 사용자 편집만 허용)
+# draft.md: review-format.md 포맷으로 재렌더 (preserved 노트 + preserved meta 포함)
 ```
 
 ### U-2. feature_name → feature_id 해상
@@ -936,8 +955,9 @@ python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/feature_id.py" 
 - 부분 모드 (`FEATURE_NAME` 지정) 면:
   - `notion-update-page command=update_content` 로 해당 Toggle 블록만 검색-교체
   - old_str 은 기존 Toggle 의 `<!-- feature_id: <uuid> -->` 부터 다음 Toggle 의 `<!-- feature_id: ... -->` (또는 페이지 끝) 까지
+  - note_extractor/merger 가 `<!-- meta_start|end -->` 도 보존 대상으로 처리한다 (Python 에서 이미 지원)
 - 전체 모드:
-  - 5-4 (덮어쓰기 노트 보존) 와 동일
+  - 5-4 (덮어쓰기 노트 보존) 와 동일. meta 블록은 note_merger 가 자동 병합.
 
 ### U-7. 락 해제
 
