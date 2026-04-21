@@ -38,6 +38,31 @@
 
 ---
 
+## 왜 만들었나
+
+### 반복되는 세 가지 문제
+
+**1. 같은 PDF 를 두 번 읽기.** 기획자가 `알림-설정-v3.pdf` 를 공유방에 올리면 iOS 가 한 번, Android 가 한 번 열어 본다. 각자 Notion/Slack 에 해석을 남긴다. "누가 먼저 정리하느냐" 가 암묵적 책임이 되고, **해석이 어긋나면 구현 단계에서야 발견** 된다.
+
+**2. 엣지케이스를 구현 말미에 발견.** "에러 케이스 / 빈 상태 / 오프라인 / 권한 / 로딩 / 접근성" 여섯 가지는 거의 매번 빠진다. PR 리뷰에서 "이 케이스 어떡해요?" 가 터지면 그때부터 기획자·디자이너와 협의가 시작된다. **선택 항목이 아니라 체크리스트** 여야 한다.
+
+**3. 개발 기간 추정이 암묵지.** "이 피처 얼마 걸려요?" 질문에 2년차는 감으로 2일, 5년차는 감으로 5일을 답한다. 과거에 비슷한 피처를 얼마나 걸렸는지는 아무도 기록하지 않는다. **신규 팀원은 추정을 감당 못하고, 기획자는 기간을 받을 근거가 없다.**
+
+### 이 플러그인이 다루는 부분
+
+- PDF → Notion 한 페이지로 **집중점(single source of truth)** 만들기
+- Phase 3 에서 6개 엣지케이스 **자동 체크** (설정으로 팀 규칙 추가 가능)
+- Phase 3.5 (v0.4+) 에서 **`project-context.md` 와 실제 코드베이스를 참고해** 피처별 예상 기간·타팀 의존성·기획 누락·타팀 요청사항을 자동 제안
+- iOS / Android / 공통 노트가 **같은 페이지** 에 공존, 재실행해도 상대방 노트를 덮어쓰지 않음
+
+### 이 플러그인이 다루지 않는 부분
+
+- 기획 품질 자체를 개선해주지는 않음 (누락 체크만 함)
+- 개발 기간 추정은 **힌트** — 팀 리더가 최종 조정해야 함
+- 기존 앱과의 중복/충돌 자동 탐지는 v0.5+
+
+---
+
 ## 처음 설치
 
 ### A. 팀 리드가 한 번만 해주세요
@@ -242,11 +267,99 @@ Phase 4 (노트 편집) → Phase 5 (병합 퍼블리시) 만 실행. iOS/Androi
 
 ---
 
+## 어떻게 만들어졌나 — Superpowers 활용
+
+**이 플러그인 자체가 Claude Code + `superpowers` 플러그인 만으로 개발됐습니다.** 코드를 손으로 타이핑한 줄 수는 매우 적고, 대부분이 브레인스토밍 → 스펙 → 플랜 → 서브에이전트 구현 → 두 단계 리뷰 사이클의 결과입니다. 같은 방식으로 다음 기능을 추가하고 싶은 팀원이 참고할 수 있도록 개발 흐름을 기록해둡니다.
+
+### 사용한 superpowers skills
+
+| Skill | 언제 | 무엇을 |
+|---|---|---|
+| `superpowers:brainstorming` | 아이디어 → 설계 | 한 번에 한 질문씩, 2-3 approach 비교, 승인 후 `docs/superpowers/specs/` 에 design doc 커밋 |
+| `superpowers:writing-plans` | 스펙 → 구현 플랜 | Commit 단위로 쪼개고, 각 Commit 을 2-5분짜리 task 로 분해. TDD 단계 명시 |
+| `superpowers:subagent-driven-development` | 플랜 → 실제 코드 | 각 Commit 을 **fresh subagent** 로 dispatch, 끝나면 **spec 리뷰 + code quality 리뷰** 두 번 |
+| `superpowers:test-driven-development` | 각 task 내부 | 실패 테스트 먼저 → 구현 → 테스트 통과 → commit 사이클 강제 |
+| `superpowers:finishing-a-development-branch` | 구현 완료 후 | pytest 최종 검증, merge/PR/keep/discard 4개 옵션 중 선택 |
+
+### v0.4.0 실제 개발 흐름
+
+```
+사용자 아이디어
+   │
+   ▼
+[brainstorming skill]
+   │  · 한 번에 한 질문씩: "프로젝트" 가 뭔가요? → iOS/Android 코드베이스
+   │  · 2-3 approach 비교: Notion DB 비교 vs 코드베이스 비교 vs 둘 다
+   │  · 중간에 Plan agent 로 독립 아키텍트 리뷰 받음
+   │  · 사용자 "꼬인다" 피드백 → 원점 복귀 → 재정의 (codebase-diff-filter → feature-enrichment)
+   │  · 최종 spec: docs/superpowers/specs/2026-04-21-feature-enrichment-design.md
+   │
+   ▼
+[writing-plans skill]
+   │  · 8 commits × 32 tasks 로 분해
+   │  · 각 task 에 "test 작성 → fail 확인 → 구현 → pass 확인 → commit"
+   │  · docs/superpowers/plans/2026-04-21-feature-enrichment.md
+   │
+   ▼
+[subagent-driven-development skill]
+   │  ┌─────────────────────────────────────────┐
+   │  │ Task 별 반복                              │
+   │  │  1. implementer subagent dispatch         │
+   │  │  2. spec compliance reviewer              │
+   │  │  3. code quality reviewer (superpowers:   │
+   │  │     code-reviewer agent)                  │
+   │  │  4. 이슈 나오면 fix subagent → 재리뷰       │
+   │  └─────────────────────────────────────────┘
+   │
+   ▼
+[finishing-a-development-branch skill]
+   │  · pytest 59/59 green 확인
+   │  · 4 옵션 중 "push to origin/main" 선택
+   │  · fast-forward push
+   ▼
+   v0.4.0 배포 완료
+```
+
+### 이 흐름에서 실제로 얻은 것
+
+- **사용자 요구 오해가 brainstorming 중에 드러났습니다.** 초안 "이미 구현된 피처 제외" 로 spec 까지 썼는데, 사용자가 "꼬인다" 고 말씀해서 원점 복귀 → "피처 메타 정보 자동 제안" 으로 완전히 재정의. **코드 없이** 설계만 버리면 되어서 비용이 작았습니다.
+- **Plan-level 오프바이원 버그를 implementer 가 잡아냈습니다.** 테스트 `range(1000)` 과 구현 `[:500]` 조합이 맞지 않았는데, subagent 가 구현 전에 발견하고 BLOCKED 리포트 → controller 가 test fix 지시 → 진행.
+- **Critical runtime 버그 3건이 code-quality 리뷰어 덕분에 잡혔습니다.**
+  - `CONFIG_PATH="${WORK_DIR}/.."` 가 `/tmp` 로 해석되는 문제
+  - `project_context_path` 상대경로가 cwd 기준으로 풀리는 문제 (spec 은 config 기준)
+  - `"공통"` 플랫폼 문자열이 dispatch 규칙에서 누락되는 문제
+- **최종 holistic 리뷰에서 Important 2건** 발견 (wrong-schema silent coercion, U-5 3-way meta) → v0.4.1 로 이월 (CHANGELOG + README "알려진 제약" 에 명시).
+
+### 수치로 본 v0.4.0
+
+| 항목 | 값 |
+|---|---|
+| 총 commit | 10 (7 feature + 3 fix) |
+| 통과한 리뷰 게이트 | 7 Commit × 2 (spec + code quality) = 14회 |
+| 수정 commit 필요했던 review | 3회 (NEEDS_CHANGES → fix → APPROVED) |
+| pytest | 49 → **59 passed** (신규 10) |
+| 신규/수정 파일 | 16 |
+| 신규 insertions | ~3,370 lines (대부분 SKILL.md + spec/plan docs) |
+
+### 같은 방식으로 기능을 추가하고 싶다면
+
+```
+/skill superpowers:brainstorming     # 아이디어부터
+/skill superpowers:writing-plans     # 승인된 spec 을 플랜으로
+/skill superpowers:subagent-driven-development   # 플랜 실행
+/skill superpowers:finishing-a-development-branch   # 마무리
+```
+
+각 스킬이 다음 스킬로 자연스럽게 이어집니다. 중간에 설계가 흔들리면 brainstorming 으로 돌아가도 됩니다 — 저희가 v0.4.0 개발 중에 한 번 그렇게 했습니다.
+
+---
+
 ## 더 알아보기
 
 - **최근 변경**: [`CHANGELOG.md`](CHANGELOG.md)
 - **스킬 내부 동작**: [`skills/pdf-spec-organizer/SKILL.md`](skills/pdf-spec-organizer/SKILL.md)
 - **설계 스펙**: [`docs/superpowers/specs/`](docs/superpowers/specs/)
+- **구현 플랜**: [`docs/superpowers/plans/`](docs/superpowers/plans/)
 - **수동 QA 체크리스트**: [`docs/manual-qa.md`](docs/manual-qa.md)
 - **기여 가이드**: 새 워크플로우를 쌓으려면 `skills/<new-feature>/` + `commands/<new-feature>.md` 형태로 추가. 기존 `pdf-spec-organizer` 파일은 건드리지 마세요.
 
