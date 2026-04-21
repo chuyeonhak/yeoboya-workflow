@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.3.0] - 2026-04-21
 
 ### Added
 - Phase 2-6 **웹 피처 필터링 단계** — 네이티브 개발팀이 웹 전용 피처를 한 번에 제외 (`excluded: true` 플래그). 제외된 피처는 Phase 3/4/5 에서 완전 스킵, Notion 에 생성 안 됨.
