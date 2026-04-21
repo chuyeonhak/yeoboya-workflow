@@ -377,6 +377,173 @@ print(json.dumps({'items': items, 'source': source}))
 계속하려면 Enter.
 ```
 
+## Phase 3.5 — 피처 메타 정보 생성 (v0.4.0)
+
+**왜:** Phase 3 의 고정 체크리스트 누락 체크만으로는 "개발 착수 가능한 스펙" 이 되지 않는다. 이 단계는 `project-context.md` (팀/과거 사례/타팀 채널) 와 iOS/Android 코드베이스(선택) 를 참고해 각 피처에 **예상 기간 / 타팀 의존성 / 기획 누락 포인트 / 타팀 요청사항** 메타 정보를 자동 제안한다. 최종 결정은 Phase 4 에디터에서 개발자가 내린다.
+
+### 3.5-a. 선행 조건 확인
+
+Run:
+```bash
+CONFIG_PATH="${WORK_DIR}/../yeoboya-workflow.config.json"  # Precondition 2 에서 찾은 경로
+CTX_REL=$(python3 -c "
+import json, sys
+cfg = json.load(open('${CONFIG_PATH}'))
+print(cfg.get('pdf_spec_organizer', {}).get('project_context_path', ''))
+")
+```
+
+`CTX_REL` 이 비어 있으면 아래 경고를 출력하고 **Phase 4 로 곧장 진입**:
+```
+ℹ️  project_context_path 가 설정되지 않아 피처 메타 정보 생성 스킵.
+  설정 가이드: README.md "프로젝트 컨텍스트 셋업"
+```
+
+비어 있지 않으면 절대경로로 정규화 후 `enrich_features.py load-context` 로 로드:
+
+```bash
+CTX_ABS=$(python3 -c "import os,sys; print(os.path.realpath(os.path.expanduser(sys.argv[1])))" "$CTX_REL")
+python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/enrich_features.py" \
+  load-context --path "$CTX_ABS" > "${WORK_DIR}/context.json"
+```
+
+결과 `context.json` 의 `skip: true` 이면 위와 동일한 경고 후 Phase 4 진입. `truncated: true` 이면 경고:
+```
+⚠️  project-context.md 가 <total_line_count> 줄입니다. 앞 500 줄만 사용합니다.
+```
+
+`codebase_roots` 가 비어 있으면 한 번만 안내:
+```
+ℹ️  codebase_roots 가 설정되지 않아 코드 힌트 없이 메타를 생성합니다.
+  기간 추정 신뢰도가 낮을 수 있습니다. Phase 4 에서 개발자 검토를 권장합니다.
+```
+
+### 3.5-b. 코드베이스 탐색 (Explore subagent)
+
+`codebase_roots` 각 플랫폼 경로가 존재하면, 해당 플랫폼에 속한 `excluded == false` 피처마다 **Claude Code `Explore` subagent** 를 spawn 한다.
+
+병렬화 규칙 (`superpowers:dispatching-parallel-agents` 원칙):
+- 대상 피처 수 < 3 → 순차 호출 (Agent 툴 호출을 연속으로)
+- 대상 피처 수 ≥ 3 → 플랫폼별로 묶어 **단일 메시지에 여러 Agent 호출** (병렬 dispatch)
+- 공통 피처 (`platform` 에 iOS 와 Android 모두 포함) → iOS/Android 양쪽 각각 Explore 1회씩
+
+각 Explore 호출 파라미터:
+- `subagent_type`: `"Explore"`
+- `description`: `"<피처명> 코드 조사"` (5단어 이내)
+- `prompt`: 아래 템플릿에서 생성
+
+```
+프로젝트 루트: <codebase_roots.<platform>>
+thoroughness: medium
+
+다음 피처가 이 레포에 이미 존재하거나 관련 구조가 있는지 조사하고,
+새로 구현할 경우의 복잡도를 200 단어 이내로 요약해 달라.
+
+[피처]
+이름: <feature.name>
+요약: <feature.summary>
+요구사항:
+<feature.requirements>
+
+보고에 포함:
+1. 유사/관련 코드 경로 (파일명 + 핵심 심볼)
+2. 재사용 가능한 컴포넌트 / 보일러플레이트 유무
+3. 신규 파일/모듈 대략 개수
+4. 기존 코드 패턴과의 충돌 가능성
+5. 요약은 200 단어 이내
+```
+
+예외/실패 처리:
+- Explore 가 에러 반환 또는 2분 timeout → 해당 피처의 해당 플랫폼 보고를 `"(탐색 실패 - skipped)"` 로 두고 계속
+- 누적 토큰 사용률이 80% 를 넘었다고 판단되면 이후 spawn 부터 `thoroughness` 를 `"quick"` 으로 강등하고 사용자에게 안내:
+  ```
+  ⚠️  토큰 한도에 근접해 이후 Explore 호출은 quick 모드로 전환합니다.
+  ```
+
+각 피처별 보고(플랫폼별)를 JSON 하나로 모아 `${WORK_DIR}/explore_reports.json` 로 저장:
+```json
+{
+  "<feature_id>": {
+    "ios": "<200 word summary>",
+    "android": "<200 word summary>"
+  }
+}
+```
+
+### 3.5-c. Claude 메타 정보 생성
+
+`excluded == false` 피처마다 Claude 가 아래 프롬프트로 JSON 메타를 생성하고, 전체를 `${WORK_DIR}/metadata.json` (feature_id → metadata dict) 으로 저장.
+
+프롬프트 (피처 1개당 1회, features.json 의 데이터와 context.json / explore_reports.json 을 합성):
+
+```
+다음 정보로 피처의 개발 계획 메타 정보를 JSON 으로 생성.
+
+[피처]
+이름: <name>
+플랫폼: <platform>
+요약: <summary>
+요구사항:
+<requirements>
+
+[Phase 3 누락 체크 결과]
+누락: <missing>
+명시: <satisfied>
+
+[프로젝트 컨텍스트]
+<context.json.content>
+
+[관련 코드 탐색 결과]  # explore_reports.json 에 해당 feature_id 가 있을 때만
+- iOS: <explore_reports[fid].ios>
+- Android: <explore_reports[fid].android>
+
+요청 JSON 스키마:
+{
+  "estimated_effort": "string (플랫폼별 기간 권장)",
+  "external_dependencies": [
+    {"team": "string", "item": "string", "blocking": true|false, "note": "string"}
+  ],
+  "planning_gaps": ["string", ...],
+  "cross_team_requests": [
+    {"team": "string", "item": "string", "by": "string"}
+  ]
+}
+
+규칙:
+- 빈 항목은 [] 또는 "" 허용
+- team 은 프로젝트 컨텍스트의 "External Teams & Channels" 에 언급된 이름을 우선 사용
+- estimated_effort 는 프로젝트 컨텍스트의 "Past Effort References" 를 참고해 추정
+- planning_gaps 는 Phase 3 누락 체크와 중복돼도 무방 (관점이 다름)
+- 응답은 위 스키마의 JSON 만. 다른 텍스트 없음.
+```
+
+Claude 응답을 JSON 으로 파싱. 파싱 실패하거나 스키마 불일치 시 해당 피처를 스킵(엔트리 제외)하고 `enrich_features.py merge-metadata` 의 fallback 경로에 맡긴다.
+
+누적된 `metadata.json` 을 features.json 에 병합:
+
+```bash
+python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/enrich_features.py" \
+  merge-metadata \
+  --features-file "${WORK_DIR}/features.json" \
+  --metadata "${WORK_DIR}/metadata.json"
+```
+
+`merge-metadata` 의 stdout JSON 에서:
+- `parsed_ok: false` → 전체 JSON 깨짐. 모든 피처가 빈 메타로 fallback 됨
+- `touched` / `fallback` 카운트를 다음 단계 요약에 활용
+
+### 3.5-d. 요약 출력
+
+각 피처에 대해 `references/review-format.md` 의 "피처 메타 정보 생성 요약 (Phase 3.5)" 블록을 따라 출력.
+
+- 빈 필드는 "(없음)" 으로 표시
+- 파싱 실패로 빈 메타가 된 피처에는 경고 한 줄:
+  ```
+  ⚠️  <피처명>: Claude 메타 생성 실패, 빈 값으로 계속합니다. Phase 4 에서 수동 작성하세요.
+  ```
+- `--fast` 모드: 요약만 출력 후 Phase 4 로 진입 (Enter 프롬프트 생략)
+- 일반 모드: "계속하려면 Enter." 대기
+
 ## Phase 4 — 개발자 노트 + 미리보기 + 개입 ②
 
 **왜:** 기술 판단(iOS/Android 구현 차이, 엣지케이스, 팀 간 질문거리) 은 Claude 가 대신할 수 없는 영역. 이 단계가 스킬의 핵심 가치 — 팀 지식을 축적하는 지점. v2 부터는 PDF 1개 = 초안 1개 = Notion 페이지 1개 구조이므로 모든 피처 노트를 **한 파일 안에서** 한 번에 작성한다.
