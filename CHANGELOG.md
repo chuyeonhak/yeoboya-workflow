@@ -1,5 +1,20 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- Phase 2-6 **웹 피처 필터링 단계** — 네이티브 개발팀이 웹 전용 피처를 한 번에 제외 (`excluded: true` 플래그). 제외된 피처는 Phase 3/4/5 에서 완전 스킵, Notion 에 생성 안 됨.
+- Claude 힌트 — 각 피처 옆에 "웹 같음", "혼합" 등 짧은 태깅 (자동 제외 아님, 사용자 판단 보조용).
+- Resume 모드에 `excluded_ids` 직렬화 — 중단된 세션 복구 시 제외 상태 유지.
+
+### Changed
+- Phase 3/4/5 워크플로우: `excluded == false` 인 피처만 처리.
+- `features.json` 스키마: 각 피처 객체에 `excluded: bool` 필드 추가 (기본 false).
+
+### Compatibility
+- v0.2 이전 초안은 `excluded_ids` 헤더가 없어도 resume 정상 동작 (하위 호환).
+- Python 스크립트 변경 없음, 기존 18 pytest 그대로 통과.
+
 ## v0.2.0 — 2026-04-20
 
 ### Changed
