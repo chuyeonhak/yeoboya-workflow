@@ -41,6 +41,25 @@ last_block_sentinel_id:
 	- [ ] 에러 케이스 — 명시 없음
 	- [x] 빈 상태 — 명시됨
 
+	<!-- meta_start -->
+	#### 📊 개발 계획 메타
+
+	**예상 기간:** iOS 2-3일, Android 2-3일
+
+	**타팀 의존성:**
+	- 🚫 [백엔드] 알림 설정 저장 API — blocking
+	  - POST /users/me/notification-settings
+
+	**기획 누락 포인트:**
+	- API 실패 시 UI 처리 정의 없음
+	- 이전 설정값 출처 명시 없음
+
+	**타팀 요청 사항:**
+	- [디자인] 토글 off 상태 스타일 확정 (개발 착수 전)
+
+	> ℹ️ Claude 가 project-context 기반으로 제안한 값입니다. Phase 4 에서 검토/수정하세요.
+	<!-- meta_end -->
+
 	<!-- notes_ios_start -->
 	### iOS
 	<empty-block/>
@@ -73,6 +92,7 @@ last_block_sentinel_id:
 
 - `<!-- feature_id: ... -->` — Toggle rename/reorder 후에도 노트 보존 병합이 가능한 안정적 식별자.
 - `<!-- notes_*_start|end -->` — `/spec-update` 시 해당 섹션만 정확히 교체/추출.
+- `<!-- meta_start|end -->` — Phase 3.5 가 생성한 "📊 개발 계획 메타" 섹션 경계. note_extractor/merger 가 노트 섹션과 동일하게 보존한다.
 - `<!-- publish_sentinel: ... -->` — Phase 5 chunked publish 재개용 커서.
 - `<!-- plugin-state ... -->` — `/spec-resume` phase 판정용. Notion 퍼블리시 시에는 필터링 후 제거.
 
@@ -154,3 +174,38 @@ Phase 2 완료 후: 위 메뉴
 결과: `features.json` 의 해당 피처에 `excluded: true` 플래그 설정.
 
 Phase 3 완료 후:
+
+### 피처 메타 정보 생성 요약 (Phase 3.5)
+
+`project_context_path` 설정이 있을 때 Phase 3 직후 아래 요약이 출력된다:
+
+```
+피처 메타 정보 생성 완료 (excluded 제외 <N>개 피처):
+
+  1. <피처명>
+     예상 기간: iOS 2-3일, Android 2-3일
+     타팀 의존: 백엔드 — 알림 설정 저장 API (blocking)
+     기획 누락: API 실패 UI, 이전 설정값 출처
+     타팀 요청: 디자인 — 토글 off 상태 (개발 착수 전)
+
+  2. ...
+
+검토/수정은 Phase 4 (개발자 노트) 에서 진행됩니다.
+계속하려면 Enter.
+```
+
+표시 규칙:
+- "(없음)" 으로 표시되는 필드: 해당 피처에서 비어있는 항목
+- `codebase_roots` 미설정: 시작 시 한 번만 "기간 추정 신뢰도 하락" 경고 출력
+- `project_context_path` 미설정: Phase 3.5 전체 스킵 + "설정 가이드는 README" 경고
+- `--fast`: 요약만 출력, Enter 없이 Phase 4 로 진입
+
+#### 메타 섹션 포맷 (초안 md)
+
+각 피처 Toggle 내 `<!-- meta_start -->` ~ `<!-- meta_end -->` 사이. 하위 섹션 순서 고정:
+1. `#### 📊 개발 계획 메타` 헤딩
+2. `**예상 기간:**` — 자유 문자열. 빈 값이면 "(미정)"
+3. `**타팀 의존성:**` — 리스트. blocking → `🚫`, non-blocking → `ℹ️`. 빈 리스트 → "(없음)"
+4. `**기획 누락 포인트:**` — 불릿 리스트. 빈 리스트 → "(없음)"
+5. `**타팀 요청 사항:**` — 리스트 `[팀] 아이템 (by)`. 빈 리스트 → "(없음)"
+6. 마지막에 `> ℹ️ Claude 가 project-context 기반으로 제안한 값입니다. Phase 4 에서 검토/수정하세요.`
