@@ -2,6 +2,11 @@
   "pdf_spec_organizer": {
     "notion_database_id": "<your-feature-db-id>",
     "notion_data_source_id": "<your-data-source-id>",
-    "parent_page_id": "<your-parent-page-id>"
+    "parent_page_id": "<your-parent-page-id>",
+    "project_context_path": "./docs/project-context.md",
+    "codebase_roots": {
+      "ios": "<optional: absolute or ~-expanded path to iOS repo>",
+      "android": "<optional: absolute or ~-expanded path to Android repo>"
+    }
   }
 }
