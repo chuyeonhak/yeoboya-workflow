@@ -340,6 +340,8 @@ print(json.dumps({'items': items, 'source': source}))
 
 ### 3-2. 피처별 누락 항목 계산
 
+**excluded 피처 스킵:** `features.json` 의 `excluded: true` 인 피처는 이 단계에서 처리 안 함. 아래 루프는 `excluded == false` 인 피처에만 적용.
+
 각 피처에 대해:
 1. `applies_to` 와 피처 `platform` 의 교집합이 비어있으면 해당 체크 항목은 스킵
 2. 남은 항목에 대해 Claude 가 피처의 `summary` + `requirements` 를 읽고 "이 항목이 명시되어 있는가?" 판정
@@ -391,7 +393,11 @@ python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/feature_id.py" 
 
 ### 4-2. 초안 md 파일 렌더
 
-`features.json` + `missing.json` + `parsed.json` 을 통합해 `${DRAFT_PATH}` 로 저장. 포맷은 `references/review-format.md` 의 "초안 파일 구조" 를 엄격히 따른다.
+**excluded 피처 제외:** `features.json` 의 `excluded: true` 인 피처는 초안 md 에 등장하지 않는다. Toggle 블록, 노트 섹션, 메타 모두 생성 안 함.
+
+**excluded_ids 직렬화:** 초안 헤더 `<!-- plugin-state ... -->` 블록에 `excluded_ids: [<uuid>, ...]` 리스트 포함. Resume 시 복원에 사용. excluded 피처가 없으면 빈 리스트 `[]` 또는 키 생략.
+
+`features.json` + `missing.json` + `parsed.json` 을 통합해 `${DRAFT_PATH}` 로 저장 (excluded 피처 제외). 포맷은 `references/review-format.md` 의 "초안 파일 구조" 를 엄격히 따른다.
 
 **중요:**
 - `<!-- plugin-state -->` 헤더에 `phase: 4`, `pdf_hash`, `source_file`, `created_at`, `publish_state: idle`, `page_id:` (빈 값), `last_block_sentinel_id:` (빈 값) 포함
@@ -462,6 +468,8 @@ python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/feature_id.py" 
 - `PDF_FILENAME=$(basename "$PDF_PATH")` 만 저장 (홈 경로 노출 방지)
 
 ### 5-2. Dedup 조회
+
+**excluded 피처 스킵:** `features.json` 의 `excluded: true` 인 피처는 Notion 조회/생성/업데이트 대상 아님. 아래 루프는 `excluded == false` 인 피처에만 돈다.
 
 1. `mcp__claude_ai_Notion__notion-search` 로 `data_source_url=collection://<data_source_id>`, query=`<PDF 해시>` 검색 (title + PDF 해시 property 매칭)
 2. 해시 일치 페이지 있음 → 1a. "동일 PDF 재실행" 프롬프트 (`references/conflict-policy.md` 참조)
@@ -602,6 +610,22 @@ python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/draft_registry.
 - `chunks_appending`: shell 페이지 재검증 후 sentinel-based 재개 (R-3)
 - `complete`: "이미 완료된 초안입니다. 새 실행을 원하시나요?" 프롬프트
 - `failed`: publish.log 마지막 에러 출력 → 재시도/취소 프롬프트
+
+**excluded_ids 복원:** 초안 헤더에 `excluded_ids: ["<uuid>", ...]` 가 있으면 features.json 의 해당 피처들을 `excluded: true` 로 복원. 헤더 포맷 예:
+
+```
+<!-- plugin-state
+phase: 4
+pdf_hash: <short-hash>
+source_file: <filename>
+created_at: <iso8601>
+excluded_ids:
+  - <uuid-1>
+  - <uuid-2>
+-->
+```
+
+excluded_ids 가 비어 있거나 키가 없으면 (v0.2 이전 초안) 무시하고 진행. 하위 호환 유지.
 
 ### R-3. 페이지 재검증 및 sentinel 재개
 
