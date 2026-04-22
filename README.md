@@ -2,7 +2,7 @@
 
 **여보야 iOS/Android 팀을 위한 Claude Code 플러그인.** 기획자에게 받은 PDF 스펙을 Notion 피처 DB 로 정리하고, 누락된 엣지케이스를 자동 체크하고, 플랫폼별 개발 노트를 한 페이지에서 공유한다.
 
-**상태:** v0.4.0 — 프로젝트 컨텍스트 기반 피처 메타 자동 제안 기능 추가
+**상태:** v0.4.0 + Unreleased — v0.4.0 에서 프로젝트 컨텍스트 기반 피처 메타 자동 제안, Unreleased 에서 **일감 단위 통합 진입점 `/work`** 추가. PDF 없는 경로(`conversation-spec-organizer`) 는 설계 완료, 배선은 v0.5 에서 제공.
 
 ---
 
@@ -150,15 +150,26 @@ Claude Code 에서 `/plugin` 으로 이 레포를 등록하거나, `~/.claude/se
 
 ### 워크플로우 단계 (한눈에 보기)
 
-1. **PDF 받기.** 기획자가 공유한 스펙 PDF 를 로컬에 저장.
-2. **커맨드 실행.** 프로젝트 레포에서 `/spec-from-pdf <pdf-path>` 입력.
+1. **`/work` 실행.** 프로젝트 레포에서 `/work` 입력 → 작업 유형(feature/bug/enhancement) + PDF 유무 확인.
+2. **PDF 경로.** PDF 있으면 `/spec-from-pdf` 로 자동 위임. 아래 표의 Phase 1-5 가 대화식 진행.
+   - (대안) PDF 가 이미 손에 있으면 `/spec-from-pdf <path>` 를 바로 호출해도 됨.
 3. **피처 구조 확인.** 파싱/구조화 결과를 검토, 필요시 경계 조정 (`y`/`s`/`m`/`r`).
 4. **누락 체크 리뷰.** 6개 카테고리 (에러/빈 상태/오프라인/권한/로딩/접근성) 자동 리포트 확인 — v0.4+ 는 Phase 3.5 에서 예상 기간·타팀 의존성도 같이 제안.
 5. **개발자 노트 작성.** 에디터에서 **자기 플랫폼 섹션만** 편집 후 저장.
 6. **Notion 퍼블리시 & 공유.** 페이지 URL 을 팀 Slack 에 공유.
 7. **반대편 플랫폼.** 상대 플랫폼 개발자는 같은 URL 로 `/spec-update <url>` — **같은 페이지에 노트 공존**.
 
-### PDF 스펙 정리 (가장 자주 쓰는 명령)
+> PDF 가 없는 일감(버그 수정, 소규모 강화 등) 은 `/work --no-pdf` 가 `conversation-spec-organizer` 로 라우팅하도록 설계되어 있습니다. 실제 배선은 v0.5 에서 제공.
+
+### 통합 진입점 (권장)
+
+```
+/work                                             # 대화형 — 전부 물어봄
+/work --type=feature --pdf=~/Downloads/spec.pdf   # 한 번에 지정
+/work --type=bug --no-pdf                         # PDF 없는 단순 작업 (v0.5+)
+```
+
+### PDF 스펙 정리 (직접 호출)
 
 ```
 /spec-from-pdf ~/Downloads/알림-설정-스펙.pdf
@@ -363,11 +374,12 @@ Phase 4 (노트 편집) → Phase 5 (병합 퍼블리시) 만 실행. iOS/Androi
 ## 더 알아보기
 
 - **최근 변경**: [`CHANGELOG.md`](CHANGELOG.md)
-- **스킬 내부 동작**: [`skills/pdf-spec-organizer/SKILL.md`](skills/pdf-spec-organizer/SKILL.md)
+- **스킬 내부 동작 (PDF 경로)**: [`skills/pdf-spec-organizer/SKILL.md`](skills/pdf-spec-organizer/SKILL.md)
+- **스킬 내부 동작 (대화 경로, 설계 단계)**: [`skills/conversation-spec-organizer/SKILL.md`](skills/conversation-spec-organizer/SKILL.md)
 - **설계 스펙**: [`docs/superpowers/specs/`](docs/superpowers/specs/)
 - **구현 플랜**: [`docs/superpowers/plans/`](docs/superpowers/plans/)
 - **수동 QA 체크리스트**: [`docs/manual-qa.md`](docs/manual-qa.md)
-- **기여 가이드**: 새 워크플로우를 쌓으려면 `skills/<new-feature>/` + `commands/<new-feature>.md` 형태로 추가. 기존 `pdf-spec-organizer` 파일은 건드리지 마세요.
+- **기여 가이드**: 새 워크플로우를 쌓으려면 `skills/<new-feature>/` + `commands/<new-feature>.md` 형태로 추가. 기존 `pdf-spec-organizer` / `conversation-spec-organizer` 파일은 건드리지 마세요.
 
 ---
 
@@ -376,6 +388,10 @@ Phase 4 (노트 편집) → Phase 5 (병합 퍼블리시) 만 실행. iOS/Androi
 **v0.4.1 (가까운 개선):**
 - Claude 메타 응답 스키마 검증 강화
 - `/spec-update` 3-way merge 에 meta 섹션 포함
+
+**v0.5 (계획 중):**
+- `conversation-spec-organizer` 배선 완료 — `/work --no-pdf` 에서 Brainstorming → 스펙 정리 → Notion publish 자동화
+- Superpowers `writing-plans` · `test-driven-development` 연계 — 스펙 → PLAN → TDD 체인 자동화
 
 **v0.5+ (고려 중):**
 - 기존 Notion 피처 DB 와의 중복/충돌 자동 탐지
