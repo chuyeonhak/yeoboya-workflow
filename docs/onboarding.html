@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>yeoboya-workflow 플러그인 온보딩</title>
+<style>
+  :root {
+    --bg: #fafaf9;
+    --card: #ffffff;
+    --border: #e5e5e3;
+    --text: #1a1a1a;
+    --muted: #6b6b6b;
+    --accent: #2563eb;
+    --good: #059669;
+    --bad: #dc2626;
+    --warn: #d97706;
+    --partial: #0891b2;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.65;
+    padding: 40px 20px;
+  }
+  .container { max-width: 920px; margin: 0 auto; }
+  header {
+    padding-bottom: 28px;
+    border-bottom: 2px solid var(--text);
+    margin-bottom: 36px;
+  }
+  header .tag {
+    display: inline-block;
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    font-weight: 600;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  h1 { font-size: 32px; font-weight: 700; letter-spacing: -0.01em; }
+  header p { color: var(--muted); margin-top: 10px; font-size: 15px; }
+  section { margin-bottom: 44px; }
+  h2 {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  h3 {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 20px 0 10px;
+  }
+  p, li { font-size: 15px; }
+  ul { list-style: none; }
+  code {
+    background: #f1f1ef;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 13px;
+  }
+  pre {
+    background: #0f172a;
+    color: #e2e8f0;
+    padding: 16px 18px;
+    border-radius: 8px;
+    font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 13px;
+    line-height: 1.55;
+    overflow-x: auto;
+    margin: 12px 0;
+  }
+  /* ---- flow ---- */
+  .flow {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px 24px;
+  }
+  .flow ol { padding-left: 20px; }
+  .flow li { margin: 6px 0; }
+  /* ---- progress tracker ---- */
+  .tracker {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .step {
+    display: grid;
+    grid-template-columns: 32px 1fr auto;
+    gap: 14px;
+    align-items: center;
+    padding: 14px 18px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .step.done { border-left: 4px solid var(--good); }
+  .step.partial { border-left: 4px solid var(--partial); }
+  .step.todo { border-left: 4px solid var(--bad); opacity: 0.85; }
+  .step-num {
+    width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 50%;
+    background: #f1f1ef;
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .step.done .step-num { background: #d1fae5; color: var(--good); }
+  .step.partial .step-num { background: #cffafe; color: var(--partial); }
+  .step.todo .step-num { background: #fee2e2; color: var(--bad); }
+  .step-body .title { font-weight: 600; font-size: 15px; }
+  .step-body .sub { color: var(--muted); font-size: 13px; margin-top: 2px; }
+  .status {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    padding: 4px 10px;
+    border-radius: 999px;
+  }
+  .status.done { background: #d1fae5; color: var(--good); }
+  .status.partial { background: #cffafe; color: var(--partial); }
+  .status.todo { background: #fee2e2; color: var(--bad); }
+  /* ---- note / retrospective ---- */
+  .retro {
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-left: 4px solid var(--warn);
+    border-radius: 10px;
+    padding: 22px 26px;
+  }
+  .retro h3 { margin-top: 0; color: var(--warn); }
+  .retro p + p { margin-top: 10px; }
+  /* ---- architecture ---- */
+  .arch-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  @media (max-width: 720px) { .arch-grid { grid-template-columns: 1fr; } }
+  .arch-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 20px;
+  }
+  .arch-card h4 {
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    color: var(--accent);
+    letter-spacing: 0.02em;
+  }
+  .arch-card p, .arch-card li { font-size: 14px; color: var(--text); }
+  .arch-card ul { margin-top: 6px; }
+  .arch-card li {
+    padding: 4px 0 4px 14px;
+    position: relative;
+    color: var(--muted);
+  }
+  .arch-card li::before {
+    content: "›";
+    position: absolute;
+    left: 0;
+    color: var(--accent);
+    font-weight: 700;
+  }
+  /* ---- phase table ---- */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  th, td {
+    padding: 10px 14px;
+    text-align: left;
+    font-size: 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  th {
+    background: #f5f5f3;
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  tr:last-child td { border-bottom: none; }
+  td.phase-num { font-weight: 700; color: var(--accent); width: 60px; }
+  td.phase-status { width: 100px; }
+  .dot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+  .dot.done { background: var(--good); }
+  .dot.partial { background: var(--partial); }
+  .dot.todo { background: var(--bad); }
+  /* ---- conclusion ---- */
+  .conclusion {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-left: 4px solid var(--accent);
+    border-radius: 10px;
+    padding: 22px 26px;
+  }
+  .conclusion strong { color: var(--accent); }
+  footer {
+    margin-top: 56px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 13px;
+    text-align: center;
+  }
+  .legend {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 14px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div class="tag">Team Onboarding · v0.4.0</div>
+    <h1>yeoboya-workflow 플러그인 현황</h1>
+    <p>원래 의도한 워크플로우와 현재 구현 상태, 그리고 이 플러그인을 만든 아키텍처 설명</p>
+  </header>
+
+  <!-- 1. Intended Workflow -->
+  <section>
+    <h2>1. 원래 의도한 워크플로우</h2>
+    <div class="flow">
+      <ol>
+        <li><code>/SPEC-creator</code> 진입점 → 작업 유형 질문 (새 기능 · 버그 수정 · 기능 강화)</li>
+        <li>PDF 유무 확인</li>
+        <li><strong>PDF 있음:</strong> PDF → 스펙 변환 스킬</li>
+        <li><strong>PDF 없음:</strong> 단순 작업 판정 → Superpowers 로 스펙 작성 → Notion 업로드</li>
+        <li>PDF 기반 스펙: <strong>프로젝트 분석</strong> → 구현 항목 / 기존 사용자 영향 / 엣지케이스 / 개발 기간 산정 → Notion 업로드</li>
+        <li>스펙 기준 Superpowers 로 <strong>PLAN 작성</strong></li>
+        <li>PLAN 기반 Superpowers <strong>TDD</strong> 로 마무리</li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- 2. Progress Tracker -->
+  <section>
+    <h2>2. 의도 대비 현재 구현 상태</h2>
+    <div class="legend">
+      <span><span class="dot done"></span>완료</span>
+      <span><span class="dot partial"></span>부분 구현 / 중단</span>
+      <span><span class="dot todo"></span>미구현</span>
+    </div>
+
+    <div class="tracker">
+      <div class="step todo">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <div class="title"><code>/SPEC-creator</code> 진입점</div>
+          <div class="sub">작업 유형 분기 (새 기능 · 버그 · 강화) 없음 — 현재는 PDF 전용 <code>/spec-from-pdf</code> 만 존재</div>
+        </div>
+        <span class="status todo">TODO</span>
+      </div>
+
+      <div class="step todo">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <div class="title">PDF 유무 분기</div>
+          <div class="sub">PDF 없으면 즉시 에러. 단순 작업용 스펙 작성 경로 부재</div>
+        </div>
+        <span class="status todo">TODO</span>
+      </div>
+
+      <div class="step done">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <div class="title">PDF 파싱</div>
+          <div class="sub">텍스트 + 이미지 추출 · OCR (Tesseract) fallback · PII 스캔 — Phase 1 완료</div>
+        </div>
+        <span class="status done">DONE</span>
+      </div>
+
+      <div class="step done">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <div class="title">Notion 업로드</div>
+          <div class="sub">피처 DB 페이지 생성 / 병합 · iOS · Android · 공통 노트 공존 · chunked append — Phase 5 완료</div>
+        </div>
+        <span class="status done">DONE</span>
+      </div>
+
+      <div class="step partial">
+        <div class="step-num">5</div>
+        <div class="step-body">
+          <div class="title">웹 포함 여부 필터링 (Phase 2-6)</div>
+          <div class="sub">웹 전용 피처 제외 로직을 작업 중 · <strong>이 부분을 넣다가 릴리스 기간을 못 맞춤</strong></div>
+        </div>
+        <span class="status partial">IN&nbsp;PROGRESS</span>
+      </div>
+
+      <div class="step partial">
+        <div class="step-num">6</div>
+        <div class="step-body">
+          <div class="title">프로젝트 분석 기반 메타 (개발 기간 · 엣지케이스)</div>
+          <div class="sub">Phase 3.5 로 일부 구현 — <code>project-context.md</code> + Explore subagent 로 기간 · 타팀 의존성 · 기획 누락 제안. 단 "기존 사용자 영향" 별도 섹션은 미구현</div>
+        </div>
+        <span class="status partial">PARTIAL</span>
+      </div>
+
+      <div class="step todo">
+        <div class="step-num">7</div>
+        <div class="step-body">
+          <div class="title">Superpowers <code>writing-plans</code> 연계</div>
+          <div class="sub">Notion 스펙 → PLAN 자동 생성 연결 없음</div>
+        </div>
+        <span class="status todo">TODO</span>
+      </div>
+
+      <div class="step todo">
+        <div class="step-num">8</div>
+        <div class="step-body">
+          <div class="title">Superpowers <code>test-driven-development</code> 연계</div>
+          <div class="sub">PLAN → TDD 엔드투엔드 자동화 없음</div>
+        </div>
+        <span class="status todo">TODO</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. Retrospective -->
+  <section>
+    <h2>3. 회고 — 왜 기간을 못 맞췄나</h2>
+    <div class="retro">
+      <h3>PDF 파싱 · Notion 업로드까지는 완료</h3>
+      <p>
+        의도한 7단계 중 <strong>핵심 파이프라인(PDF → 파싱 → Notion)</strong> 은 v0.3 까지 목표대로 마무리했다.
+        Phase 1(파싱) · Phase 5(퍼블리시) 가 안정화되고, 재실행 · 재개 · 부분 갱신까지 커버.
+      </p>
+      <h3 style="margin-top: 14px;">막힌 지점 — "웹 포함 여부" 필터링</h3>
+      <p>
+        기획 PDF 에는 iOS · Android 외에 <strong>웹 전용 피처</strong> 가 섞여 있는 경우가 많아, Phase 2-6 에
+        "웹이 들어가는지 안 들어가는지" 를 판별하고 걸러내는 단계를 추가하려 했다.
+        PDF 맥락에서 플랫폼을 추론하는 휴리스틱 설계 · 사용자 확인 UI · 구조화 결과에 플랫폼 태그 병합 로직이 얽혀 예상보다 커졌고,
+        <strong>이 기능을 넣다가 릴리스 일정을 못 맞췄다.</strong>
+      </p>
+      <h3 style="margin-top: 14px;">다음에 더 작게 쪼개야 할 부분</h3>
+      <p>
+        "웹 필터" 는 Phase 2(구조화) 와 Phase 3(누락 체크) 사이의 크로스컷 기능이어서 독립 커밋으로 쪼개기 어려웠다.
+        돌아본다면 <strong>구조화 결과에 플랫폼 태그만 먼저 저장</strong> 하고, 필터 UI 는 별도 스프린트로 분리했을 것.
+      </p>
+    </div>
+  </section>
+
+  <!-- 4. Architecture -->
+  <section>
+    <h2>4. 플러그인 아키텍처</h2>
+
+    <h3>디렉터리 구조</h3>
+<pre>yeoboya-workflow/
+├── .claude-plugin/
+│   ├── plugin.json          # 플러그인 메타 (name, version)
+│   └── marketplace.json
+├── commands/                # 슬래시 커맨드 엔트리포인트 (얇은 래퍼)
+│   ├── spec-from-pdf.md
+│   ├── spec-update.md
+│   └── spec-resume.md
+├── skills/
+│   ├── pdf-spec-organizer/
+│   │   ├── SKILL.md         # 실제 워크플로우 로직 (Phase 1~5)
+│   │   ├── scripts/         # Python 파싱 · OCR · PII 스캔
+│   │   └── references/      # 템플릿, 프롬프트 가이드
+│   └── common/
+│       └── scripts/         # pdf_hash.py, draft_registry.py 등 공용
+├── docs/
+│   ├── superpowers/
+│   │   ├── specs/           # brainstorming 산출물
+│   │   └── plans/           # writing-plans 산출물
+│   └── manual-qa.md
+└── yeoboya-workflow.config.json   # 팀 공유 설정 (레포 커밋)</pre>
+
+    <div class="arch-grid">
+      <div class="arch-card">
+        <h4>① 커맨드 ↔ 스킬 분리</h4>
+        <p>슬래시 커맨드는 인자 파싱 · 환경변수 정규화만. 실제 워크플로우 로직은 전부 <code>SKILL.md</code> 안에 있다.</p>
+        <ul>
+          <li>커맨드는 "얇은 래퍼" — 교체 · 추가 비용 최소화</li>
+          <li>스킬은 MODE 환경변수(<code>update</code>/<code>resume</code>)로 단일 엔트리 유지</li>
+        </ul>
+      </div>
+
+      <div class="arch-card">
+        <h4>② 팀 공유 단일 소스</h4>
+        <p><code>yeoboya-workflow.config.json</code> 을 레포에 커밋해 <strong>모든 팀원이 같은 Notion DB</strong> 를 바라보게 강제.</p>
+        <ul>
+          <li>없으면 즉시 중단 — 해석 분기 방지</li>
+          <li>팀 리드 최초 1회 셋업 후 전원 동일 동작</li>
+        </ul>
+      </div>
+
+      <div class="arch-card">
+        <h4>③ 상태 보존 + 재개 (Resume)</h4>
+        <p>초안을 <code>/tmp/spec-draft-&lt;hash&gt;-&lt;ts&gt;/draft.md</code> 에 저장하고, 상단의 <code>&lt;!-- plugin-state --&gt;</code> 헤더에 <code>phase</code>, <code>publish_state</code>, <code>page_id</code> 를 기록.</p>
+        <ul>
+          <li>중단돼도 <code>/spec-resume</code> 로 해당 Phase 부터 이어받기</li>
+          <li>Phase 5 도중 chunk append 부분 실패도 sentinel 로 복구</li>
+        </ul>
+      </div>
+
+      <div class="arch-card">
+        <h4>④ 동시 실행 감지</h4>
+        <p>PDF 해시 + <code>draft_registry.py</code> 로 "5분 내 같은 PDF 를 누군가 실행 중" 을 감지, 덮어쓰기 전에 사용자 조율 유도.</p>
+        <ul>
+          <li>iOS · Android 가 같은 PDF 를 동시에 돌려도 충돌 회피</li>
+        </ul>
+      </div>
+
+      <div class="arch-card">
+        <h4>⑤ Phase 기반 선형 파이프라인</h4>
+        <p>파싱 → 구조화 → (웹 필터) → 누락 체크 → 메타 생성 → 노트 작성 → 퍼블리시. 각 Phase 는 직전 Phase 결과만 읽음.</p>
+        <ul>
+          <li>중간 실패 지점이 명확 — 재개 / 디버깅 용이</li>
+          <li>Phase 3.5 같은 신규 단계 삽입이 쉬움</li>
+        </ul>
+      </div>
+
+      <div class="arch-card">
+        <h4>⑥ 병합 가능 Notion 스키마</h4>
+        <p>하나의 Notion 피처 페이지 안에 <strong>iOS · Android · 공통</strong> 노트 섹션이 공존. 재실행해도 상대 플랫폼 섹션을 덮어쓰지 않는다.</p>
+        <ul>
+          <li>3-way merge 로직으로 동시 편집 충돌 감지</li>
+          <li>피처별 Toggle 단위 편집(<code>--feature</code>) 지원</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>Phase 파이프라인 상세</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Phase</th>
+          <th>역할</th>
+          <th>상태</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td class="phase-num">1</td><td>PDF 파싱 · OCR · PII 스캔</td><td class="phase-status"><span class="dot done"></span>완료</td></tr>
+        <tr><td class="phase-num">2</td><td>피처 N개 구조화 · iOS/Android/공통 태깅</td><td class="phase-status"><span class="dot done"></span>완료</td></tr>
+        <tr><td class="phase-num">2-6</td><td>웹 전용 피처 제외 (선택)</td><td class="phase-status"><span class="dot partial"></span>중단</td></tr>
+        <tr><td class="phase-num">3</td><td>누락 체크 (에러/빈상태/오프라인/권한/로딩/접근성)</td><td class="phase-status"><span class="dot done"></span>완료</td></tr>
+        <tr><td class="phase-num">3.5</td><td>예상 기간 · 타팀 의존성 · 기획 누락 제안 (v0.4+)</td><td class="phase-status"><span class="dot partial"></span>부분</td></tr>
+        <tr><td class="phase-num">4</td><td>플랫폼별 개발자 노트 작성</td><td class="phase-status"><span class="dot done"></span>완료</td></tr>
+        <tr><td class="phase-num">5</td><td>Notion 페이지 생성 · 병합 퍼블리시</td><td class="phase-status"><span class="dot done"></span>완료</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- 5. Summary -->
+  <section>
+    <h2>5. 요약</h2>
+    <div class="conclusion">
+      현재 플러그인은 <strong>의도한 파이프라인의 앞단(PDF 파싱 → Notion 업로드) + 프로젝트 분석 일부</strong> 까지 구현됐다.
+      <strong>웹 포함 여부 필터링</strong> 을 Phase 2-6 에 붙이려다 범위가 커지며 기간을 못 맞췄고,
+      상위 진입점인 <strong><code>/SPEC-creator</code></strong> 와 <strong>Superpowers PLAN / TDD 연계</strong> 는 미착수 상태다.
+      <br><br>
+      다음 마일스톤: <strong>① 웹 필터 Phase 2-6 마무리</strong> →
+      <strong>② <code>/SPEC-creator</code> 진입점 (유형 분기 · PDF 유무 분기)</strong> →
+      <strong>③ 스펙 → PLAN → TDD 체인 자동화</strong>.
+    </div>
+  </section>
+
+  <footer>
+    yeoboya-workflow · v0.4.0 · 2026-04-22 기준
+  </footer>
+</div>
+</body>
+</html>
