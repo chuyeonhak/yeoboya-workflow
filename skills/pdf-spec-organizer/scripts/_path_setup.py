@@ -14,11 +14,11 @@ COMMON_SCRIPTS_DIR = (
     Path(__file__).resolve().parent.parent.parent / "common" / "scripts"
 )
 
-if str(COMMON_SCRIPTS_DIR) not in sys.path:
-    sys.path.insert(0, str(COMMON_SCRIPTS_DIR))
-
 if not COMMON_SCRIPTS_DIR.exists():
     raise ImportError(
         f"common/scripts/ not found at {COMMON_SCRIPTS_DIR}. "
         f"plugin installation may be broken."
     )
+
+if str(COMMON_SCRIPTS_DIR) not in sys.path:
+    sys.path.insert(0, str(COMMON_SCRIPTS_DIR))
