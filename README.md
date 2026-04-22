@@ -94,17 +94,9 @@
 |---|---|---|---|
 | **Notion MCP** | Phase 5 — 피처 스펙을 Notion 피처 DB 페이지로 퍼블리시·병합 | 필수 | Claude Code 에 Notion MCP 연결 + Notion 설정 → Connections → Claude 추가 |
 | **Tesseract** | Phase 1 — 이미지 기반 PDF 의 OCR 텍스트 추출 | 필수 | `brew install tesseract tesseract-lang` |
-| **Superpowers 플러그인** | 이 플러그인에 **새 기능을 추가/유지보수** 할 때 (아래 스킬 표 참고) | 선택 (기여자용) | Claude Code `/plugin` 으로 `superpowers` 레포 등록 |
+| **Superpowers 플러그인** | Phase 3.5 — `superpowers:dispatching-parallel-agents` 원칙을 따라 피처별 Explore subagent 를 병렬 dispatch | 필수 | Claude Code `/plugin` 으로 `superpowers` 레포 등록 |
 
-**Superpowers 에서 쓰는 스킬 (기여자용):**
-
-| 스킬 | 언제 쓰나 | 한 줄 요약 |
-|---|---|---|
-| `superpowers:brainstorming` | 아이디어 → 설계 | 한 번에 한 질문씩, 2-3 approach 비교 후 `docs/superpowers/specs/` 에 design doc 커밋 |
-| `superpowers:writing-plans` | 스펙 → 구현 플랜 | Commit 단위로 쪼개고, 각 Commit 을 2-5분짜리 task 로 분해 (TDD 단계 명시) |
-| `superpowers:subagent-driven-development` | 플랜 → 실제 코드 | 각 Commit 을 fresh subagent 로 dispatch, 끝나면 spec + code quality 2중 리뷰 |
-| `superpowers:test-driven-development` | 각 task 내부 | 실패 테스트 먼저 → 구현 → 테스트 통과 → commit 사이클 강제 |
-| `superpowers:finishing-a-development-branch` | 구현 완료 후 | 최종 검증 + merge/PR/keep/discard 4개 옵션 |
+> 플러그인 **개발/기여** 시 활용한 Superpowers 스킬 목록(brainstorming, writing-plans 등)은 맨 아래 ["어떻게 만들어졌나"](#어떻게-만들어졌나--superpowers-활용) 섹션 참조.
 
 #### 2. 플러그인 로드
 
