@@ -1,5 +1,12 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed (Internal — v1.0 준비)
+- 재사용 Python 모듈 8개를 `skills/common/scripts/` 로 이동 (히스토리 보존된 `git mv`)
+- `skills/pdf-spec-organizer/scripts/_path_setup.py` 신설해 `common/scripts/` 참조
+- 외부 API/동작 변경 없음 (기존 사용자 영향 없음)
+
 ## [0.4.0] - 2026-04-21
 
 ### Added
