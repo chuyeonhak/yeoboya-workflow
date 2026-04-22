@@ -4,6 +4,7 @@ import sys
 from pathlib import Path
 
 SCRIPTS_DIR = Path(__file__).parent.parent
+COMMON_SCRIPTS_DIR = SCRIPTS_DIR.parent.parent / "common" / "scripts"
 
 
 def run(*args, stdin=None):
@@ -68,7 +69,7 @@ def test_full_pipeline_produces_valid_chunks(tmp_path):
     missing_file.write_text(json.dumps({"features": []}))
 
     # 1) assign feature_ids
-    r = run(str(SCRIPTS_DIR / "feature_id.py"), "assign",
+    r = run(str(COMMON_SCRIPTS_DIR / "feature_id.py"), "assign",
             "--features-file", str(features_file))
     assert r.returncode == 0, r.stderr
 
@@ -84,12 +85,12 @@ def test_full_pipeline_produces_valid_chunks(tmp_path):
     # 3) merge empty notes (should be no-op)
     notes_file = tmp_path / "notes.json"
     notes_file.write_text(json.dumps({"features": {}}))
-    r = run(str(SCRIPTS_DIR / "note_merger.py"),
+    r = run(str(COMMON_SCRIPTS_DIR / "note_merger.py"),
             "--draft", str(draft_file), "--notes", str(notes_file))
     assert r.returncode == 0, r.stderr
 
     # 4) chunk
-    r = run(str(SCRIPTS_DIR / "page_publisher.py"), "chunk",
+    r = run(str(COMMON_SCRIPTS_DIR / "page_publisher.py"), "chunk",
             "--input", str(draft_file), "--max-blocks", "100")
     assert r.returncode == 0, r.stderr
     out = json.loads(r.stdout)
@@ -99,7 +100,7 @@ def test_full_pipeline_produces_valid_chunks(tmp_path):
         assert "publish_sentinel" in c["markdown"]
 
     # 5) verify feature_ids survive round-trip via extract
-    r = run(str(SCRIPTS_DIR / "feature_id.py"), "extract-from-stdin",
+    r = run(str(COMMON_SCRIPTS_DIR / "feature_id.py"), "extract-from-stdin",
             stdin=draft)
     extracted = json.loads(r.stdout)
     expected_ids = {f["feature_id"] for f in features["features"]}
