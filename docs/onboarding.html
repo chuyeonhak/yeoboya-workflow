@@ -231,6 +231,73 @@
     font-size: 13px;
     color: var(--muted);
   }
+  /* ---- scenarios ---- */
+  .scenario {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px 22px;
+    margin-bottom: 18px;
+  }
+  .scenario.future {
+    border-left: 4px solid var(--warn);
+    background: #fffbf3;
+  }
+  .scenario h3 {
+    font-size: 17px;
+    font-weight: 700;
+    margin: 0 0 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .scenario .sid {
+    font-size: 11px;
+    font-weight: 700;
+    background: var(--accent);
+    color: #fff;
+    padding: 2px 9px;
+    border-radius: 999px;
+    letter-spacing: 0.05em;
+  }
+  .scenario.future .sid { background: var(--warn); }
+  .scenario .lead {
+    color: var(--muted);
+    font-size: 13px;
+    margin-bottom: 14px;
+  }
+  .sc-steps {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 8px 14px;
+    font-size: 14px;
+  }
+  .sc-role {
+    font-weight: 600;
+    font-size: 12px;
+    background: #f1f1ef;
+    color: var(--text);
+    padding: 3px 10px;
+    border-radius: 6px;
+    align-self: start;
+    white-space: nowrap;
+  }
+  .sc-role.ios { background: #dbeafe; color: #1e40af; }
+  .sc-role.android { background: #d1fae5; color: #065f46; }
+  .sc-role.pm { background: #fef3c7; color: #92400e; }
+  .sc-role.dev { background: #ede9fe; color: #5b21b6; }
+  .sc-step-body { padding: 2px 0; }
+  .sc-step-body code {
+    font-size: 12px;
+  }
+  .sc-arrow {
+    color: var(--muted);
+    text-align: center;
+    grid-column: 1 / -1;
+    font-size: 18px;
+    line-height: 0.8;
+    margin: -2px 0;
+  }
 </style>
 </head>
 <body>
@@ -464,9 +531,96 @@
     </table>
   </section>
 
-  <!-- 5. Summary -->
+  <!-- 5. Scenarios -->
   <section>
-    <h2>5. 요약</h2>
+    <h2>5. 팀 협업 시나리오</h2>
+    <p style="color: var(--muted); font-size: 14px; margin-bottom: 16px;">
+      실제 현장에서 플러그인이 어떻게 쓰이는지 — 각 시나리오는 <code>/work</code> 또는 기존 커맨드로 진입합니다.
+    </p>
+
+    <!-- Scenario A -->
+    <div class="scenario">
+      <h3><span class="sid">A</span>기획 PDF 최초 정리</h3>
+      <div class="lead">iOS · Android 두 플랫폼이 같은 Notion 페이지에서 스펙과 노트를 공유하는 기본 흐름.</div>
+      <div class="sc-steps">
+        <div class="sc-role ios">iOS</div>
+        <div class="sc-step-body"><code>/work</code> 실행 → 유형 <strong>feature</strong>, PDF 경로 <code>알림-설정.pdf</code> 지정</div>
+        <div class="sc-arrow">↓</div>
+        <div class="sc-role dev">플러그인</div>
+        <div class="sc-step-body"><code>/spec-from-pdf</code> 로 위임 → Phase 1~5 자동 진행, 피처 "알림 설정" 생성 · iOS 노트 작성 → Notion 페이지 생성</div>
+        <div class="sc-arrow">↓</div>
+        <div class="sc-role ios">iOS</div>
+        <div class="sc-step-body">Slack 에 Notion URL 공유</div>
+        <div class="sc-arrow">↓</div>
+        <div class="sc-role android">Android</div>
+        <div class="sc-step-body">같은 URL 로 <code>/spec-update &lt;url&gt;</code> → Android 섹션만 추가</div>
+        <div class="sc-arrow">↓</div>
+        <div class="sc-role dev">결과</div>
+        <div class="sc-step-body">한 Notion 페이지에 <strong>iOS · Android · 공통</strong> 노트가 공존. 재실행해도 서로의 노트를 덮어쓰지 않음.</div>
+      </div>
+    </div>
+
+    <!-- Scenario B -->
+    <div class="scenario">
+      <h3><span class="sid">B</span>구현 중 엣지케이스 보강</h3>
+      <div class="lead">개발하다가 새 엣지케이스를 발견했을 때, 해당 피처 Toggle 만 열어 내 플랫폼 섹션에 추가.</div>
+      <div class="sc-steps">
+        <div class="sc-role dev">개발자</div>
+        <div class="sc-step-body">개발 도중 "오프라인 상태 진입 시" 케이스 미정의를 발견</div>
+        <div class="sc-arrow">↓</div>
+        <div class="sc-role dev">개발자</div>
+        <div class="sc-step-body"><code>/spec-update &lt;page-url&gt; --feature="알림 설정"</code> → 해당 Toggle 블록만 에디터에서 열림</div>
+        <div class="sc-arrow">↓</div>
+        <div class="sc-role dev">결과</div>
+        <div class="sc-step-body">본인 플랫폼 섹션에 노트 추가 → 저장 → Notion 에 병합 반영 (다른 플랫폼 섹션은 보존)</div>
+      </div>
+    </div>
+
+    <!-- Scenario C -->
+    <div class="scenario">
+      <h3><span class="sid">C</span>기획자와의 기간 협상 (v0.4+)</h3>
+      <div class="lead">프로젝트 컨텍스트 + 코드베이스 분석으로 예상 기간 · 타팀 의존성 · 기획 누락을 자동 제안.</div>
+      <div class="sc-steps">
+        <div class="sc-role dev">팀 리드</div>
+        <div class="sc-step-body"><code>project-context.md</code> 에 과거 사례 기록 ("신규 플로우: iOS 3-5일, Android 3-5일")</div>
+        <div class="sc-arrow">↓</div>
+        <div class="sc-role ios">iOS</div>
+        <div class="sc-step-body"><code>/work --pdf=신규-기획.pdf</code> → Phase 3.5 에서 예상 기간 · 타팀 의존성 · 기획 누락 자동 제안</div>
+        <div class="sc-arrow">↓</div>
+        <div class="sc-role dev">팀 리드</div>
+        <div class="sc-step-body">Phase 4 에디터에서 제안을 검토 · 수정 → Notion 페이지에 "📊 개발 계획 메타" 블록으로 퍼블리시</div>
+        <div class="sc-arrow">↓</div>
+        <div class="sc-role pm">PM / 기획자</div>
+        <div class="sc-step-body">Notion 페이지 하나로 기간 · 의존성 확인 → 협상 기반 명확화</div>
+      </div>
+    </div>
+
+    <!-- Scenario D (future) -->
+    <div class="scenario future">
+      <h3><span class="sid">D</span>PDF 없는 일감 — 대화 기반 스펙 (v0.5 예정)</h3>
+      <div class="lead">기획 PDF 가 없는 버그 수정 · 소규모 강화에서 머릿속 스펙을 Superpowers 로 구조화.</div>
+      <div class="sc-steps">
+        <div class="sc-role dev">개발자</div>
+        <div class="sc-step-body"><code>/work --type=bug --no-pdf</code> 실행</div>
+        <div class="sc-arrow">↓</div>
+        <div class="sc-role dev">플러그인</div>
+        <div class="sc-step-body"><code>conversation-spec-organizer</code> 로 라우팅 → <code>superpowers:brainstorming</code> 으로 재현 스텝 · 근본 원인 · 회귀 방지 수집</div>
+        <div class="sc-arrow">↓</div>
+        <div class="sc-role dev">플러그인</div>
+        <div class="sc-step-body">수집된 내용을 draft.md 로 구조화 → 사용자 검토</div>
+        <div class="sc-arrow">↓</div>
+        <div class="sc-role dev">플러그인</div>
+        <div class="sc-step-body">Phase 5 퍼블리시 로직 재사용 → Notion 페이지 생성</div>
+        <div class="sc-arrow">↓</div>
+        <div class="sc-role dev">결과</div>
+        <div class="sc-step-body">PDF 없이도 동일한 Notion 스펙 구조로 유지 — <strong>v0.5 에서 배선 완료 예정</strong></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6. Summary -->
+  <section>
+    <h2>6. 요약</h2>
     <div class="conclusion">
       현재 플러그인은 <strong>의도한 파이프라인의 앞단(PDF 파싱 → Notion 업로드) + 프로젝트 분석 일부 + <code>/work</code> 진입점</strong> 까지 구현됐다.
       <strong>PDF 없는 경로</strong> 는 신규 스킬 <code>conversation-spec-organizer</code> 의 3-Phase 설계가 끝났고 실제 배선이 진행 중.
