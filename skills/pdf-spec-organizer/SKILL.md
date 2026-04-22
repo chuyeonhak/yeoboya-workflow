@@ -47,7 +47,7 @@ python3 -c "import PyPDF2, pdf2image, PIL, yaml, pytesseract" 2>&1
 실패 시:
 ```
 ❌ Python 의존성이 설치되지 않았습니다.
-  pip install -r ${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/requirements.txt
+  pip install -r ${CLAUDE_PLUGIN_ROOT}/skills/common/scripts/requirements.txt
 ```
 
 ### 4. Tesseract 확인 (경고만, 차단 아님)
@@ -71,7 +71,7 @@ Run: `command -v tesseract`
 
 ```bash
 PDF_PATH="$1"  # 절대경로로 정규화된 값
-PDF_HASH=$(python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/pdf_hash.py" "$PDF_PATH")
+PDF_HASH=$(python3 "${CLAUDE_PLUGIN_ROOT}/skills/common/scripts/pdf_hash.py" "$PDF_PATH")
 TS=$(date +%s)
 WORK_DIR="/tmp/spec-draft-${PDF_HASH}-${TS}"
 mkdir -p "$WORK_DIR"
@@ -81,7 +81,7 @@ DRAFT_PATH="${WORK_DIR}/draft.md"
 ### 1-2. 동시 실행 감지
 
 ```bash
-python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/draft_registry.py" \
+python3 "${CLAUDE_PLUGIN_ROOT}/skills/common/scripts/draft_registry.py" \
   query-recent --hash "$PDF_HASH" --within-seconds 300 > "${WORK_DIR}/recent.json"
 ```
 
@@ -98,7 +98,7 @@ python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/draft_registry.
 ### 1-3. 실행 기록
 
 ```bash
-python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/draft_registry.py" \
+python3 "${CLAUDE_PLUGIN_ROOT}/skills/common/scripts/draft_registry.py" \
   record --hash "$PDF_HASH" --draft-path "$DRAFT_PATH" --status running
 ```
 
@@ -141,7 +141,7 @@ python3 -c "
 import json
 data = json.load(open('${WORK_DIR}/parsed.json'))
 print('\n'.join(p['text'] for p in data['pages']))
-" | python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/pii_scan.py" > "${WORK_DIR}/pii.json"
+" | python3 "${CLAUDE_PLUGIN_ROOT}/skills/common/scripts/pii_scan.py" > "${WORK_DIR}/pii.json"
 ```
 
 `pii.json` 의 `findings` 가 비어있지 않으면 경고만 표시 (차단 아님):
@@ -225,7 +225,7 @@ Phase 1 산출물(`parsed.json` + `ocr.json` + 이미지 썸네일)을 읽어 **
 
 취소 시:
 ```bash
-python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/draft_registry.py" \
+python3 "${CLAUDE_PLUGIN_ROOT}/skills/common/scripts/draft_registry.py" \
   update-status --draft-path "$DRAFT_PATH" --status failed
 ```
 /tmp 폴더는 TTL 에 의해 7일 후 자동 삭제.
@@ -235,7 +235,7 @@ python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/draft_registry.
 Phase 2 의 모든 분기(split/merge/rename) 가 확정되면 `feature_id.py assign` 으로 UUID 부여:
 
 ```bash
-python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/feature_id.py" assign \
+python3 "${CLAUDE_PLUGIN_ROOT}/skills/common/scripts/feature_id.py" assign \
   --features-file "${WORK_DIR}/features.json"
 ```
 
@@ -413,7 +413,7 @@ if os.path.isabs(raw):
 else:
     print(os.path.realpath(os.path.join(base, raw)))
 " "$CONFIG_PATH" "$CTX_REL")
-python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/enrich_features.py" \
+python3 "${CLAUDE_PLUGIN_ROOT}/skills/common/scripts/enrich_features.py" \
   load-context --path "$CTX_ABS" > "${WORK_DIR}/context.json"
 ```
 
@@ -556,7 +556,7 @@ Claude 응답을 JSON 으로 파싱. 파싱 실패하거나 스키마 불일치 
 누적된 `metadata.json` 을 features.json 에 병합:
 
 ```bash
-python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/enrich_features.py" \
+python3 "${CLAUDE_PLUGIN_ROOT}/skills/common/scripts/enrich_features.py" \
   merge-metadata \
   --features-file "${WORK_DIR}/features.json" \
   --metadata "${WORK_DIR}/metadata.json"
@@ -585,7 +585,7 @@ python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/enrich_features
 ### 4-1. feature_id 할당
 
 ```bash
-python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/feature_id.py" \
+python3 "${CLAUDE_PLUGIN_ROOT}/skills/common/scripts/feature_id.py" \
   assign --features-file "${WORK_DIR}/features.json"
 ```
 
@@ -689,13 +689,13 @@ python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/feature_id.py" 
 # mcp__claude_ai_Notion__notion-create-pages 호출 → page_id 획득
 
 # 2) draft.md 본문을 chunks 로 분할
-python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/page_publisher.py" chunk \
+python3 "${CLAUDE_PLUGIN_ROOT}/skills/common/scripts/page_publisher.py" chunk \
   --input "${DRAFT_PATH}" --max-blocks 80 > "${WORK_DIR}/chunks.json"
 
 # 3) plugin-state 업데이트
 #    publish_state=page_created
 #    page_id=<notion page id>
-python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/draft_registry.py" update-status \
+python3 "${CLAUDE_PLUGIN_ROOT}/skills/common/scripts/draft_registry.py" update-status \
   --draft-path "${DRAFT_PATH}" \
   --status running \
   --page-id "${PAGE_ID}" \
@@ -721,11 +721,11 @@ python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/draft_registry.
 # 결과를 ${WORK_DIR}/existing_body.md 로 저장
 
 # 2) 노트 추출
-python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/note_extractor.py" \
+python3 "${CLAUDE_PLUGIN_ROOT}/skills/common/scripts/note_extractor.py" \
   < "${WORK_DIR}/existing_body.md" > "${WORK_DIR}/preserved_notes.json"
 
 # 3) 새 draft 에 병합
-python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/note_merger.py" \
+python3 "${CLAUDE_PLUGIN_ROOT}/skills/common/scripts/note_merger.py" \
   --draft "${DRAFT_PATH}" \
   --notes "${WORK_DIR}/preserved_notes.json"
 
@@ -747,7 +747,7 @@ python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/note_merger.py"
 
 성공:
 ```bash
-python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/draft_registry.py" update-status \
+python3 "${CLAUDE_PLUGIN_ROOT}/skills/common/scripts/draft_registry.py" update-status \
   --draft-path "${DRAFT_PATH}" \
   --status success \
   --publish-state complete
@@ -755,7 +755,7 @@ python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/draft_registry.
 
 부분 실패 (chunk 도중 중단):
 ```bash
-python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/draft_registry.py" update-status \
+python3 "${CLAUDE_PLUGIN_ROOT}/skills/common/scripts/draft_registry.py" update-status \
   --draft-path "${DRAFT_PATH}" \
   --status partial_success \
   --publish-state chunks_appending
@@ -787,7 +787,7 @@ python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/draft_registry.
 
 GC 트리거:
 ```bash
-python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/draft_registry.py" gc
+python3 "${CLAUDE_PLUGIN_ROOT}/skills/common/scripts/draft_registry.py" gc
 ```
 `partial_success` 는 7일 보존 (GC 대상 아님) 이므로 자연스럽게 `/spec-resume` 시나리오 보호.
 
@@ -859,7 +859,7 @@ Resume 는 Phase 3.5 를 **다시 실행하지 않음** — 이미 진행 중인
 #   >
 
 # 2) 페이지 본문 fetch → sentinel 스캔
-python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/page_publisher.py" find-sentinel \
+python3 "${CLAUDE_PLUGIN_ROOT}/skills/common/scripts/page_publisher.py" find-sentinel \
   --input "${WORK_DIR}/existing_body.md" > "${WORK_DIR}/sentinel.json"
 
 # 3) last_chunk_index 읽기:
@@ -912,7 +912,7 @@ python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/page_publisher.
 `$FEATURE_NAME` 이 지정된 경우:
 
 ```bash
-python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/feature_id.py" resolve \
+python3 "${CLAUDE_PLUGIN_ROOT}/skills/common/scripts/feature_id.py" resolve \
   --features-file "${WORK_DIR}/features.json" \
   --name "$FEATURE_NAME" > "${WORK_DIR}/resolved.json" 2> "${WORK_DIR}/resolve_err.txt"
 

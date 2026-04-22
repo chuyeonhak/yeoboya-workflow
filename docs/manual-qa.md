@@ -4,7 +4,7 @@
 
 ## 사전 준비
 
-- [ ] Python 의존성 설치 완료 (`pip install -r skills/pdf-spec-organizer/scripts/requirements.txt`)
+- [ ] Python 의존성 설치 완료 (`pip install -r skills/common/scripts/requirements.txt`)
 - [ ] Tesseract 설치 완료 (`brew install tesseract tesseract-lang`)
 - [ ] `yeoboya-workflow.config.json` 프로젝트 레포 루트에 존재
 - [ ] Claude Code 에 Notion MCP 연결됨
