@@ -90,12 +90,21 @@
 
 #### 1. 사전 준비
 
-- **Python 3.11+**
-- **Tesseract** (이미지 기반 PDF OCR 용):
-  ```bash
-  brew install tesseract tesseract-lang
-  ```
-- **Notion MCP** 가 Claude Code 에 연결돼 있고 팀 워크스페이스 접근 권한 필요
+| 의존성 | 언제/어디서 쓰이나 | 필수? | 설치/설정 |
+|---|---|---|---|
+| **Notion MCP** | Phase 5 — 피처 스펙을 Notion 피처 DB 페이지로 퍼블리시·병합 | 필수 | Claude Code 에 Notion MCP 연결 + Notion 설정 → Connections → Claude 추가 |
+| **Tesseract** | Phase 1 — 이미지 기반 PDF 의 OCR 텍스트 추출 | 필수 | `brew install tesseract tesseract-lang` |
+| **Superpowers 플러그인** | 이 플러그인에 **새 기능을 추가/유지보수** 할 때 (아래 스킬 표 참고) | 선택 (기여자용) | Claude Code `/plugin` 으로 `superpowers` 레포 등록 |
+
+**Superpowers 에서 쓰는 스킬 (기여자용):**
+
+| 스킬 | 언제 쓰나 | 한 줄 요약 |
+|---|---|---|
+| `superpowers:brainstorming` | 아이디어 → 설계 | 한 번에 한 질문씩, 2-3 approach 비교 후 `docs/superpowers/specs/` 에 design doc 커밋 |
+| `superpowers:writing-plans` | 스펙 → 구현 플랜 | Commit 단위로 쪼개고, 각 Commit 을 2-5분짜리 task 로 분해 (TDD 단계 명시) |
+| `superpowers:subagent-driven-development` | 플랜 → 실제 코드 | 각 Commit 을 fresh subagent 로 dispatch, 끝나면 spec + code quality 2중 리뷰 |
+| `superpowers:test-driven-development` | 각 task 내부 | 실패 테스트 먼저 → 구현 → 테스트 통과 → commit 사이클 강제 |
+| `superpowers:finishing-a-development-branch` | 구현 완료 후 | 최종 검증 + merge/PR/keep/discard 4개 옵션 |
 
 #### 2. 플러그인 로드
 
@@ -110,17 +119,6 @@ Claude Code 에서 `/plugin` 으로 이 레포를 등록하거나, `~/.claude/se
 ```
 
 재시작 후 `/spec-from-pdf`, `/spec-update`, `/spec-resume` 가 뜨면 OK.
-
-#### 3. Python 의존성
-
-플러그인 디렉터리에서:
-
-```bash
-cd /path/to/yeoboya-workflow/skills/pdf-spec-organizer/scripts
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-```
 
 ### C. (선택) 프로젝트 컨텍스트 셋업 — v0.4+
 
@@ -259,7 +257,6 @@ Phase 4 (노트 편집) → Phase 5 (병합 퍼블리시) 만 실행. iOS/Androi
 |---|---|---|
 | `❌ 팀 공유 설정 파일이 없습니다` | `yeoboya-workflow.config.json` 없음 | 팀 리드가 위 "A. 팀 리드" 절차로 생성 후 커밋 |
 | `tesseract not found` | Tesseract 미설치 | `brew install tesseract tesseract-lang` |
-| `PyPDF2 not found` | Python venv 미활성화 | `cd skills/pdf-spec-organizer/scripts && source .venv/bin/activate && pip install -r requirements.txt` |
 | Notion 페이지 생성 실패 (404) | MCP 에 워크스페이스 접근 권한 없음 | Notion 설정 → Connections → Claude 추가 |
 | OCR 텍스트 깨짐 | 언어 팩 부재 | `brew install tesseract-lang` |
 | PII 경고가 계속 뜸 | 실제 민감 정보가 PDF 에 존재 | 마스킹된 항목 확인 후 진행 또는 PDF 정리 후 재시도 |
