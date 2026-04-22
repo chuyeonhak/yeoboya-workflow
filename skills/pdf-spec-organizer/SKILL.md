@@ -47,7 +47,7 @@ python3 -c "import PyPDF2, pdf2image, PIL, yaml, pytesseract" 2>&1
 실패 시:
 ```
 ❌ Python 의존성이 설치되지 않았습니다.
-  pip install -r ${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/requirements.txt
+  pip install -r ${CLAUDE_PLUGIN_ROOT}/skills/common/scripts/requirements.txt
 ```
 
 ### 4. Tesseract 확인 (경고만, 차단 아님)

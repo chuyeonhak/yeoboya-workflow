@@ -39,7 +39,7 @@ if [ -z "$ARG" ]; then
 fi
 
 if [ "$ARG" = "--resume-latest" ]; then
-  LATEST=$(python3 "${CLAUDE_PLUGIN_ROOT}/skills/pdf-spec-organizer/scripts/draft_registry.py" list-latest --count 10 \
+  LATEST=$(python3 "${CLAUDE_PLUGIN_ROOT}/skills/common/scripts/draft_registry.py" list-latest --count 10 \
     | python3 -c "
 import sys, json
 data = json.load(sys.stdin)
