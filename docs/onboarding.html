@@ -247,7 +247,7 @@
     <h2>1. 원래 의도한 워크플로우</h2>
     <div class="flow">
       <ol>
-        <li><code>/SPEC-creator</code> 진입점 → 작업 유형 질문 (새 기능 · 버그 수정 · 기능 강화)</li>
+        <li><code>/work</code> 진입점 → 작업 유형 질문 (새 기능 · 버그 수정 · 기능 강화)</li>
         <li>PDF 유무 확인</li>
         <li><strong>PDF 있음:</strong> PDF → 스펙 변환 스킬</li>
         <li><strong>PDF 없음:</strong> 단순 작업 판정 → Superpowers 로 스펙 작성 → Notion 업로드</li>
@@ -268,13 +268,13 @@
     </div>
 
     <div class="tracker">
-      <div class="step todo">
+      <div class="step done">
         <div class="step-num">1</div>
         <div class="step-body">
-          <div class="title"><code>/SPEC-creator</code> 진입점</div>
-          <div class="sub">작업 유형 분기 (새 기능 · 버그 · 강화) 없음 — 현재는 PDF 전용 <code>/spec-from-pdf</code> 만 존재</div>
+          <div class="title"><code>/work</code> 진입점</div>
+          <div class="sub">작업 유형 분기 (새 기능 · 버그 · 강화) + PDF 유무 질문 후 <code>/spec-from-pdf</code> 로 위임 — 신규 추가</div>
         </div>
-        <span class="status todo">TODO</span>
+        <span class="status done">DONE</span>
       </div>
 
       <div class="step todo">
@@ -475,11 +475,10 @@
     <div class="conclusion">
       현재 플러그인은 <strong>의도한 파이프라인의 앞단(PDF 파싱 → Notion 업로드) + 프로젝트 분석 일부</strong> 까지 구현됐다.
       <strong>웹 포함 여부 필터링</strong> 을 Phase 2-6 에 붙이려다 범위가 커지며 기간을 못 맞췄고,
-      상위 진입점인 <strong><code>/SPEC-creator</code></strong> 와 <strong>Superpowers PLAN / TDD 연계</strong> 는 미착수 상태다.
+      상위 진입점 <code>/work</code> 는 유형 분기 + PDF 라우팅까지 붙였고(신규), <strong>PDF 없는 경로의 자동 스펙 작성</strong> 과 <strong>Superpowers PLAN / TDD 연계</strong> 는 미착수 상태다.
       <br><br>
-      다음 마일스톤: <strong>① 웹 필터 Phase 2-6 마무리</strong> →
-      <strong>② <code>/SPEC-creator</code> 진입점 (유형 분기 · PDF 유무 분기)</strong> →
-      <strong>③ 스펙 → PLAN → TDD 체인 자동화</strong>.
+      다음 마일스톤: <strong>① PDF 없는 경로 자동 스펙 (사용자 입력 → Superpowers 체인 강제 → Notion)</strong> →
+      <strong>② 스펙 → PLAN → TDD 체인 자동화</strong>.
     </div>
   </section>
 
