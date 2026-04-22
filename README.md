@@ -18,10 +18,12 @@
 이 플러그인은 그걸 **한 번의 커맨드** 로 정리합니다:
 
 ```
-/spec-from-pdf ~/Downloads/알림-설정-스펙.pdf
+/work                                           # 일감 단위 통합 진입점 (권장)
+/work --type=feature --pdf=~/Downloads/알림.pdf
+/spec-from-pdf ~/Downloads/알림-설정-스펙.pdf    # PDF 가 이미 준비됐으면 바로 이것도 OK
 ```
 
-이 명령 하나가 PDF 를 파싱하고, 피처를 구조화하고, 6개 카테고리(에러/빈 상태/오프라인/권한/로딩/접근성) 누락을 자동 체크하고, **프로젝트 컨텍스트 기반 개발 기간·타팀 의존성·기획 누락 포인트를 제안** 한 뒤, iOS/Android 노트를 공유할 Notion 페이지까지 만들어줍니다.
+`/work` 은 작업 유형(새 기능 · 버그 수정 · 기능 강화) 과 PDF 유무를 먼저 묻고 적절한 하위 워크플로우로 라우팅합니다. PDF 가 있으면 파싱·누락 체크·프로젝트 컨텍스트 기반 메타 제안을 거쳐 Notion 페이지까지 만들어주고, PDF 가 없으면 대화 기반 스펙 작성 경로(설계 완료, 배선 진행 중 — v0.5) 로 이어집니다.
 
 ### 이런 분들께 유용합니다
 
@@ -110,7 +112,7 @@ Claude Code 에서 `/plugin` 으로 이 레포를 등록하거나, `~/.claude/se
 }
 ```
 
-재시작 후 `/spec-from-pdf`, `/spec-update`, `/spec-resume` 가 뜨면 OK.
+재시작 후 `/work`, `/spec-from-pdf`, `/spec-update`, `/spec-resume` 가 뜨면 OK.
 
 ### C. (선택) 프로젝트 컨텍스트 셋업 — v0.4+
 
@@ -235,9 +237,14 @@ Phase 4 (노트 편집) → Phase 5 (병합 퍼블리시) 만 실행. iOS/Androi
 
 | 커맨드 | 용도 | 주요 옵션 |
 |---|---|---|
+| `/work` | 일감 단위 스펙 작성 통합 진입점 — 작업 유형 + PDF 유무 분기 후 라우팅 | `--type=<feature\|bug\|enhancement>`, `--pdf=<path>`, `--no-pdf` |
 | `/spec-from-pdf <path>` | PDF → Notion 페이지 생성/병합 | `--fast`, `--diff-with-code` (v0.5+) |
 | `/spec-update <url>` | 기존 페이지의 노트 갱신 | `--feature="<이름>"` |
 | `/spec-resume` | 중단된 세션 복구 | `--resume-latest`, `<draft-path>` |
+
+> `/work` 은 v0.4.1 에서 추가된 통합 진입점. PDF 있는 경로는 바로 `/spec-from-pdf` 로 위임되고,
+> PDF 없는 경로(대화 기반 스펙 작성 → Notion 퍼블리시) 는 신규 스킬 `conversation-spec-organizer` 로
+> 설계가 완료되었으며 실제 배선은 v0.5 에서 제공됩니다.
 
 자세한 동작은 [`skills/pdf-spec-organizer/SKILL.md`](skills/pdf-spec-organizer/SKILL.md) 참조.
 

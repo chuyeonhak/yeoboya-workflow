@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Added
+- `/work` 커맨드 — 일감 단위 스펙 작성 통합 진입점. 작업 유형(`feature` / `bug` / `enhancement`) 과 PDF 유무를 대화 또는 플래그(`--type` / `--pdf` / `--no-pdf`) 로 받아 하위 워크플로우로 라우팅. PDF 있으면 `/spec-from-pdf` 로 위임, 없으면 `conversation-spec-organizer` 로 연결 (배선은 v0.5 예정).
+- `skills/conversation-spec-organizer/SKILL.md` — PDF 없는 경로용 3-Phase 설계 문서 (Brainstorming → 스펙 구조화 → Notion publish). 실제 구현은 v0.5.
+
 ### Changed (Internal — v1.0 준비)
 - 재사용 Python 모듈 8개를 `skills/common/scripts/` 로 이동 (히스토리 보존된 `git mv`)
 - `skills/pdf-spec-organizer/scripts/_path_setup.py` 신설해 `common/scripts/` 참조
