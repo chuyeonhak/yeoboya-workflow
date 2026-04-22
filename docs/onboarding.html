@@ -277,13 +277,13 @@
         <span class="status done">DONE</span>
       </div>
 
-      <div class="step todo">
+      <div class="step partial">
         <div class="step-num">2</div>
         <div class="step-body">
-          <div class="title">PDF 유무 분기</div>
-          <div class="sub">PDF 없으면 즉시 에러. 단순 작업용 스펙 작성 경로 부재</div>
+          <div class="title">PDF 유무 분기 + PDF 없는 경로</div>
+          <div class="sub"><code>/work</code> 에서 분기 UI 추가 · PDF 없는 경로용 신규 스킬 <code>conversation-spec-organizer</code> 설계 완료 (Brainstorming → 스펙 정리 → Notion publish 3-Phase). 실제 배선(wiring)은 다음 커밋에서.</div>
         </div>
-        <span class="status todo">TODO</span>
+        <span class="status partial">IN&nbsp;PROGRESS</span>
       </div>
 
       <div class="step done">
@@ -357,11 +357,6 @@
         "웹이 들어가는지 안 들어가는지" 를 판별하고 걸러내는 단계를 추가하려 했다.
         PDF 맥락에서 플랫폼을 추론하는 휴리스틱 설계 · 사용자 확인 UI · 구조화 결과에 플랫폼 태그 병합 로직이 얽혀 예상보다 커졌고,
         <strong>이 기능을 넣다가 릴리스 일정을 못 맞췄다.</strong>
-      </p>
-      <h3 style="margin-top: 14px;">다음에 더 작게 쪼개야 할 부분</h3>
-      <p>
-        "웹 필터" 는 Phase 2(구조화) 와 Phase 3(누락 체크) 사이의 크로스컷 기능이어서 독립 커밋으로 쪼개기 어려웠다.
-        돌아본다면 <strong>구조화 결과에 플랫폼 태그만 먼저 저장</strong> 하고, 필터 UI 는 별도 스프린트로 분리했을 것.
       </p>
     </div>
   </section>
@@ -473,11 +468,11 @@
   <section>
     <h2>5. 요약</h2>
     <div class="conclusion">
-      현재 플러그인은 <strong>의도한 파이프라인의 앞단(PDF 파싱 → Notion 업로드) + 프로젝트 분석 일부</strong> 까지 구현됐다.
-      <strong>웹 포함 여부 필터링</strong> 을 Phase 2-6 에 붙이려다 범위가 커지며 기간을 못 맞췄고,
-      상위 진입점 <code>/work</code> 는 유형 분기 + PDF 라우팅까지 붙였고(신규), <strong>PDF 없는 경로의 자동 스펙 작성</strong> 과 <strong>Superpowers PLAN / TDD 연계</strong> 는 미착수 상태다.
+      현재 플러그인은 <strong>의도한 파이프라인의 앞단(PDF 파싱 → Notion 업로드) + 프로젝트 분석 일부 + <code>/work</code> 진입점</strong> 까지 구현됐다.
+      <strong>PDF 없는 경로</strong> 는 신규 스킬 <code>conversation-spec-organizer</code> 의 3-Phase 설계가 끝났고 실제 배선이 진행 중.
+      <strong>Superpowers PLAN / TDD 연계</strong> 는 여전히 미착수.
       <br><br>
-      다음 마일스톤: <strong>① PDF 없는 경로 자동 스펙 (사용자 입력 → Superpowers 체인 강제 → Notion)</strong> →
+      다음 마일스톤: <strong>① <code>conversation-spec-organizer</code> 배선 완료 (brainstorming 호출 · draft 생성 · Notion publish 재사용)</strong> →
       <strong>② 스펙 → PLAN → TDD 체인 자동화</strong>.
     </div>
   </section>
